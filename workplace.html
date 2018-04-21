@@ -125,16 +125,22 @@ scene.add(particleSystem);
 testBox = new THREE.BoxGeometry(600, 600, 600);
 testBox.computeBoundingBox();
 
+function* particleIterator() {
+    var pCount = particleCount;
+    while(pCount--) {
+        // get the particle
+        particle = particles.vertices[pCount];
+        yield particle;
+    }
+}
 
 // animation loop
 function update() {
     // add some rotation to the system
     particleSystem.rotation.y += 0.001;
 
-    var pCount = particleCount;
-    while(pCount--) {
+    for (let particle of particleIterator()) {
         // get the particle
-        var particle = particles.vertices[pCount];
 
         // check if we need to reset
         if(particle.y < -200) {
