@@ -14,6 +14,8 @@
 <body>
 <div id="container"></div>
 <script src="three/three.min.js"></script>
+<script src="waka.js"></script>
+<script src="spatialhash.js/dist/spatialhash.js"></script>
 <script>
 // @see http://paulirish.com/2011/requestanimationframe-for-smart-animating/
 window.requestAnimFrame = (function(){
@@ -64,17 +66,17 @@ renderer.setSize(WIDTH, HEIGHT);
 // DOM element.
 container.appendChild(renderer.domElement);
 
-// create a point light
-const pointLight =
-  new THREE.PointLight(0xFFFFFF);
-
-// set its position
-pointLight.position.x = 10;
-pointLight.position.y = 50;
-pointLight.position.z = 130;
-
-// add to the scene
-scene.add(pointLight);
+// // create a point light
+// const pointLight =
+//   new THREE.PointLight(0xFFFFFF);
+//
+// // set its position
+// pointLight.position.x = 10;
+// pointLight.position.y = 50;
+// pointLight.position.z = 130;
+//
+// // add to the scene
+// scene.add(pointLight);
 
 
 // create the particle variables
@@ -91,7 +93,7 @@ for(var p = 0; p < particleCount; p++) {
     // create a particle with random
     // position values, -250 -> 250
     var pX = Math.random() * 500 - 250,
-        pY = Math.random() * 500 - 250,
+        pY = 50,
         pZ = Math.random() * 500 - 250,
         particle = new THREE.Vector3(pX, pY, pZ);
     // create a velocity vector
@@ -114,6 +116,15 @@ scene.add(particleSystem);
 
 // TEST
 // renderer.render(scene, camera);
+
+
+
+// TESTING
+// console.log(spatial_map_hash(0.1, 0.2, 0.3, 1, 1, 1, 0.1)); => 1,2,3
+
+testBox = new THREE.BoxGeometry(600, 600, 600);
+testBox.computeBoundingBox();
+
 
 // animation loop
 function update() {
