@@ -1,11 +1,11 @@
 function build_spatial_map(particles, pCount, box, gridDimension) {
     var map = new Map();
 
-    minPt = box.boundingBox.min;
-    maxPt = box.boundingBox.max;
-    width = box.parameters.width;
-    height = box.parameters.height;
-    depth = box.parameters.depth;
+    var minPt = box.boundingBox.min;
+    var maxPt = box.boundingBox.max;
+    var width = box.parameters.width;
+    var height = box.parameters.height;
+    var depth = box.parameters.depth;
 
     while(pCount--) {
         // get the particle
@@ -34,13 +34,13 @@ function build_spatial_map(particles, pCount, box, gridDimension) {
 
 function __spatial_map_hash(x, y, z, width, height, depth, gridDimension) {
 
-        grid_ct_width = width / gridDimension;
-        grid_ct_height = height / gridDimension;
-        grid_ct_depth = depth / gridDimension;
+        var grid_ct_width = width / gridDimension;
+        var grid_ct_height = height / gridDimension;
+        var grid_ct_depth = depth / gridDimension;
 
-        coordX = Math.floor((x / width) * grid_ct_width);
-        coordY = Math.floor((y / height) * grid_ct_height);
-        coordZ = Math.floor((z / depth) * grid_ct_depth);
+        var coordX = Math.floor((x / width) * grid_ct_width);
+        var coordY = Math.floor((y / height) * grid_ct_height);
+        var coordZ = Math.floor((z / depth) * grid_ct_depth);
 
         return [coordX, coordY, coordZ].toString();
 
