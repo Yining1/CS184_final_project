@@ -29,6 +29,15 @@ window.requestAnimFrame = (function(){
           };
 })();
 
+// CONSTANT
+solverIteration = 10;
+CUSTOM_H = 0.1; // TODO - make sure to test and change
+ETA = 0.1; // TODO -- make sure to test and change
+REST_DENSITY = 0.1; // TODO -- make sure to test and change
+TIMESTEP = 0.001; // TODO -- change as needed
+PARTICLE_COUNT = 10;
+MASS = 1;
+
 // Set the scene size.
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
@@ -80,7 +89,7 @@ container.appendChild(renderer.domElement);
 
 
 // create the particle variables
-var particleCount = 1800,
+var particleCount = PARTICLE_COUNT,
     particles = new THREE.Geometry(),
     pMaterial = new THREE.PointsMaterial({
         size: 20,
@@ -99,9 +108,10 @@ for(var p = 0; p < particleCount; p++) {
     // create a velocity vector
     particle.velocity = new THREE.Vector3(
         0,				// x
-        -Math.random(),	// y
+        0,	            // y
         0);				// z
 
+    particle.mass = MASS;
     // add it to the geometry
     particles.vertices.push(particle);
 }
@@ -113,10 +123,6 @@ var particleSystem = new THREE.Points(
 
 // add it to the scene
 scene.add(particleSystem);
-
-// TEST
-// renderer.render(scene, camera);
-
 
 
 // TESTING
@@ -134,30 +140,123 @@ function* particleIterator() {
     }
 }
 
+function W(r, h) {
+    // TODO -- because who knows if it works hahahahaha
+    // based on poly6
+    console.log(r);
+    var multiplier;
+    if (0 <= r.length() & r.length() <= h) {
+        multiplier = Math.pow(Math.pow(h, 2) - Math.pow(r.length(), 2), 3);
+    } else {
+        multiplier = 0;
+    }
+    return (315 / (64 * Math.PI * Math.pow(h, 9))) * multiplier;
+}
+
+function deltaW(r, h) {
+    // TODO - absolutely copy pasted, so be careful
+    var multiplier;
+    if (0 <= r.length() & r.length() <= h) {
+        multiplier = (r / r.length()) * Math.pow(h - r.length(), 2);
+    } else {
+        multiplier = 0;
+    }
+    return -1 * (45 / (Math.PI * Math.pow(h, 6))) * multiplier;
+
+}
+
+
+
+console.log("friendly reminder that you're using testbox as boundaries for spatial map."); // TODO -- as written
+
+function force_external(x) {
+    return new THREE.Vector3(0, -0.01, 0);
+}
+
+updateCt = 0;
 // animation loop
 function update() {
-    // add some rotation to the system
-    particleSystem.rotation.y += 0.001;
+    updateCt += 1;
+    if (updateCt % 100 == 0) {
+            console.log("update frame: ", updateCt);
+    }
+    neighborsMap = build_spatial_map(particles, particleCount, testBox, 10);
 
+    // L1-4
     for (let particle of particleIterator()) {
-        // get the particle
+        console.log(particle);
+        particle.velocity.add(force_external(particle).multiplyScalar(TIMESTEP));
+        particle.newPosition = particle.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
+        console.log(particle);
+    }
 
-        // check if we need to reset
-        if(particle.y < -200) {
-            particle.y = 200;
-            particle.velocity.y = 0;
+    // L8-19
+    for(var i=0; i < solverIteration; i++){
+        // L9-11
+        for (let particle_i of particleIterator()) {
+            // calculating C_i(p_1, ..., p_n)
+            var p_i = 0; // (1) and (2)
+            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+                console.log(particle_i);
+                p_i += particle_j.mass * W(particle_j.clone().sub(particle_i), CUSTOM_H);
+                console.log(particle_i);
+            }
+            var p_0 = REST_DENSITY; // TODO -- what should this be? corresponds to (1)
+            var C_i = (p_i / p_0) - 1;
+
+            // calculating denominator
+            var denom_sum = 0;
+            console.log(particle_i);
+            for (let particle_k of getNeighborsThisMap(particle_i, neighborsMap)) {
+                deltaC_i = (1 / p_0);
+                var multiplier = 0;
+                if (particle_k == particle_i) {
+                    for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+                        multiplier += deltaW(particle_i.clone().sub(particle_j), CUSTOM_H);
+                    }
+                } else { // then it's a neighbor of particle_i
+                    multiplier = deltaW(particle_i.clone().sub(particle_k), CUSTOM_H);
+                }
+
+
+                deltaC_i = deltaC_i * multiplier;
+                denom_sum += Math.pow(deltaC_i, 2);
+            }
+
+
+            particle.lambda = -1 * (C_i / (denom_sum + ETA));
         }
 
-        // update the velocity
-        particle.velocity.y -= Math.random() * .01;
+        // L12-15
+        for (let particle_i of particleIterator()) {
+            result = 0;
+            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+                result = (particle_i.lambda + particle_j.lambda) * W(particle_i.clone().sub(particle_j), CUSTOM_H);
+            }
 
-        // and the position
-        particle.x +=
-            particle.velocity.x;
-        particle.y +=
-            particle.velocity.y;
-        particle.z +=
-            particle.velocity.z;
+            particle_i.delta = (1/REST_DENSITY) * result;
+
+            // TODO - L14 - PERFORM COLLISION DETECTION AND RESPONSE
+        }
+
+        // L16-18
+        for (let particle of particleIterator()) {
+            particle.newPosition.add(particle.delta);
+        }
+    }
+
+    console.log(particles);
+
+
+    for (let particle of particleIterator()) {
+        console.log(particle);
+        particle.velocity = (1 / TIMESTEP) * (particle.newPosition.clone().sub(particle));
+
+        // TODO -- L22 - APPLY VORTIICITY CONFINEMENT AND XSPH VISCOSCITY
+
+        particle.x = particle.newPosition.x;
+        particle.y = particle.newPosition.y;
+        particle.z = particle.newPosition.z;
     }
 
     // flag to the particle system that we've
