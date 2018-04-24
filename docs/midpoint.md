@@ -20,7 +20,7 @@ Now, we’ve pivoted to a slightly different project; we’re using Three.js to 
 Accomplishments and future plans
 --------------------------------
 
-So far, we’ve been able to implement spatial hashing, and use Three.js and a physics plugin for it, Physi.js, to create a collision simulation. It’s a bit laggy and slow at the moment, so we’re looking to optimize it somehow as well as We’re also partway through implementing the algorithm presented in the paper Position Based Fluids \[Macklin 2007\].
+So far, we’ve been able to implement spatial hashing, and use Three.js and a physics plugin for it, Physi.js, to create a collision simulation. It’s a bit laggy and slow at the moment, so we’re looking to optimize it somehow as well as We’re also partway through implementing the algorithm presented in the paper Position Based Fluids [\[Macklin 2007\]](http://mmacklin.com/pbf_sig_preprint.pdf).
 
 Current Progress
 ----------------
@@ -47,3 +47,11 @@ Week 3: Code: water appearance, implement and hammer out interfacing between flu
 Week 4: integrate into leapmotion and work in animation with hand movement. Debug.
 
 Writeup as we go along.
+
+Powerpoint
+----------------
+[Powerpoint Link](https://docs.google.com/presentation/d/1uNGXWs0QdrtkTw03u6lmbEtBNWf1f-nlhjwwb0sEiAQ/edit?usp=sharing)
+
+Video
+----------------
+[Video Link](https://drive.google.com/file/d/1AxaYFP7YwOR1i1ABDYVZCYPUmZUx5fOE/view?usp=sharing)
