@@ -1,4 +1,3 @@
-body { padding: 100px; width: 1000px; margin: auto; text-align: left; font-weight: 300; font-family: 'Open Sans', sans-serif; color: #121212; } h1, h2, h3, h4 { font-family: 'Source Sans Pro', sans-serif; } CS 184 Final Project  
 
 CS 184: Computer Graphics and Imaging, Spring 2018
 ==================================================
