@@ -103,6 +103,8 @@
 	};
 	
 	spawnBox = (function() {
+		// var box_length = .5, box_height = .5, box_width = .5, box_offset = 2,
+		//  box_geometry = new THREE.SphereGeometry( box_length, box_height, box_width ),
 		var box_geometry = new THREE.SphereGeometry( .5, .5, .5 ),
 			handleCollision = function( collided_with, linearVelocity, angularVelocity ) {
 				switch ( ++this.collisions ) {
@@ -140,8 +142,11 @@
 					.6, // medium friction
 					.3 // low restitution
 				);
+
+
 				material.map.wrapS = material.map.wrapT = THREE.RepeatWrapping;
 				material.map.repeat.set( .5, .5 );
+				
 				
 				//material = new THREE.MeshLambertMaterial({ map: THREE.ImageUtils.loadTexture( 'images/rocks.jpg' ) });
 				
@@ -150,6 +155,25 @@
 					material
 				);
 				box.collisions = 0;
+
+				// var i, j, rows = 16,
+				// block;
+
+				// for ( i = 0; i < rows; i++ ) {
+				// for ( j = 0; j < 3; j++ ) {
+				// 	box.position.y = (box_height / 2) + box_height * i;
+				// 	if ( i % 2 === 0 ) {
+				// 		box.rotation.y = Math.PI / 2.01; // #TODO: There's a bug somewhere when this is to close to 2
+				// 		box.position.x = box_offset * j - ( box_offset * 3 / 2 - box_offset / 2 );
+				// 	} else {
+				// 		box.position.z = box_offset * j - ( box_offset * 3 / 2 - box_offset / 2 );
+				// 	}
+				// 	box.receiveShadow = true;
+				// 	box.castShadow = true;
+				// 	scene.add( box );
+					// box.push( box );
+			// 	}
+			// }
 				
 				box.position.set(
 					Math.random() * 15 - 7.5,

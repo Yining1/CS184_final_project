@@ -1,0 +1,105 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Final Project</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2018</h1>
+<h1 align="middle">Final Project Milestone: Waterbending simulation</h1>
+<h3 align="middle">Anna Brewer, Yining Chen, Regina Ongowarsito</h3>
+
+<div>
+
+<!-- <h2 align="middle">Title, Summary and Team Members</h2> -->
+
+<h2 align="middle">Early Mishaps</h2>
+<p>Our project started out a little bumpy--we had planned on using an existing library to build off and create a fluid simulation that incorporated different types of Newtonian fluids, such as the interaction between oil and water. The library ended up having many compatibility issues and dependencies that have been graveyarded a few years back, causing us to not be able to compile the code and build off of it. </p>
+
+<h2 align="middle">New Direction</h2>
+<p>Now, we’ve pivoted to a slightly different project; we’re using Three.js to create a “waterbending simulator” with WebGL and a Leap Motion hand tracking device. The device calculates position, direction and normal vectors of the user’s hands, and we’re hoping to use these vectors to allow users to interact with our fluid simulation.</p>
+
+<h2 align="middle">Accomplishments and future plans</h2>
+<p>So far, we’ve been able to implement spatial hashing, and use Three.js and a physics plugin for it, Physi.js, to create a collision simulation. It’s a bit laggy and slow at the moment, so we’re looking to optimize it somehow as well as We’re also partway through implementing the algorithm presented in the paper Position Based Fluids [Macklin 2007].
+</p>
+
+<h2 align="middle">Current Progress</h2>
+<p>So far, we’ve been able to implement spatial hashing, and use Three.js and a physics plugin for it, Physi.js, to create a collision simulation. It’s a bit laggy and slow at the moment, so we’re looking to optimize it by trying to implement this paper: Research on Collision Detection Algorithm Based on Particle Swarm Optimization <a href='https://link.springer.com/content/pdf/10.1007/978-3-642-14533-9_61.pdf'>[Zhou 2010]</a>. We are concerned about how we could implement this through the plugin, and may have to retry with our own implementation, but that might ultimately make our lives easier in the long run. </p>
+<p>We’re also partway through implementing the main part of our project: the algorithm presented in the paper Position Based Fluids <a href='http://mmacklin.com/pbf_sig_preprint.pdf'>[Macklin 2007]</a>. There’s quite a few equations that took us a while to understand, by cross referencing the given pseudocode and other related papers, we think we have a good grasp of how to implement the rest. 
+</p>
+<div align="middle">
+  <table>
+    <tr>
+        <td>
+          <img src="midpoint/1.png" align="middle" width="300px"/>
+          <figcaption align="middle">Large water droplets falling</figcaption>
+        </td>
+        <td>
+          <img src="midpoint/2.png" align="middle" width="300px"/>
+          <figcaption align="middle">Collided droplets in green</figcaption>
+        </td>
+    </tr>
+  </table>
+
+</div>
+
+<h2 align="middle">Revised Timeline</h2>
+<p>Even though we’ve done somewhat of a pivot since our original plan, our first two weeks in our old timeline had been dedicated to reading papers, outlining pseudocode, and getting basic physics working from our end. More or less, we’re on track, but we were definitely hoping to be a little further along at this point. The next two weeks will most likely be for more rigorous coding and pushing out more tangible results. For a more solid timeline, it’d look like:</p>
+<p>Week 3: Code: water appearance, implement and hammer out interfacing between fluids, work towards realtime.<p>
+<p>Week 4: integrate into leapmotion and work in animation with hand movement. Debug. <p>
+<p>Writeup as we go along.</p>
+
+<!-- <h2 align="middle">Problem Description</h2>
+
+<p>The main problem in creating a water simulation like this is being able to simulate the fluid to match its real physical properties, which often times is computationally expensive and has impractical time step efficiency. However, accurate stimulations of fluids can be applied in anything between animation cinema to microfluidic modelling, which is why we are driven to pursue this technical challenge. On top of that, we thought that since in most of the projects so far have been focusing on solid objects, creating something to do with fluids could be an interesting and challenging final project for us to tackle.</p>
+
+<h2 align="middle">Goals and Deliverables</h2>
+<p>Our baseline goal for this project is being able to create water/fluidic behavior between particles in a simulated environment. We expect to find some difficulties in correctly implementing the physics of the fluids, as well as making the particles have water like properties, and quantify the accuracy of our simulation by comparing its visual similarity to real life examples or real life observations. Ideally, we would be able to run a real time simulation, but that would be a bit more of a reach if we are ahead of schedule. Some other future goals we were thinking of are interactions between multiple bodies of water (ie dropping a large blob of water into a body of water) and simulating interactions between different Newtonian fluids.</p>
+
+<h2 align="middle">Questions</h2>
+<p>Can we use the existing <a href='https://github.com/InteractiveComputerGraphics/PositionBasedDynamics'> PositionBasedDynamics</a> framework? 
+If so, it seems like it's already handling the physics part of water simulation. If we then decide to consider one of our subgoals as a main goal instead, which is best fit for the amount of time we have?
+</p>
+<p>If we instead plan on implementing the physics part ourselves, which of the subgoals would be a good one to aim for first? In terms of the shorter timeframe in addition to implementing the water physics and the additional information we would need to implement it.
+</p>
+
+<h2 align="middle">Schedule</h2>
+<p>Week 1: plan/read papers, outline pseudocode if possible, learn dependencies</p>
+
+<p>Week 2: Code - get basic physics working</p>
+
+<p>Week 3: Code - water appearance, pick 1 subgoal: blob behavior, interface between fluids, realtime, more subgoals if we have time</p>
+
+<p>Week 4: Debug, don’t add any more features</p> 
+<p>We’ll do the write-up as we go along.</p>
+
+
+<h2 align="middle">Resources</h2>
+<ul>
+  <li><a href='http://mmacklin.com/pbf_sig_preprint.pdf'> Position Based Fluids paper</a> in conjunction with <a href='https://github.com/InteractiveComputerGraphics/PositionBasedDynamics'> PositionBasedDynamics framework</a>.</li>
+  <li>We might possibly need to use hive computers if it requires more cpu to run.</li>
+  <li>Learn how to use <a href='http://www.opengl-tutorial.org/'> OpenGL</a>.</li>
+  <li>Potentially import everythin into <a href='http://www.mitsuba-renderer.org/'> Mitsuba</a> for easier and better rendering.</li>
+  <li>For more thorough reading if google fails us: <a href='https://www.worldscientific.com/worldscibooks/10.1142/5340#t=aboutBook/'> Smoothed Particle Hydrodynamics: A Meshfree Particle Method</a> By Gui-Rong Liu, M. B. Liu</li>
+</ul> -->
+
+</body>
+</html>
