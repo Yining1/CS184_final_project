@@ -40,7 +40,7 @@ MASS = 1;
 GRID_SIZE = 100;
 CONST_K = 0.1;
 CONST_N = 4;
-DELTA_Q_ADD = THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
+DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
 
 TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
 
@@ -240,7 +240,7 @@ function update() {
             result = 0;
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 particle_ij_sub = particle_i.clone().sub(particle_j);
-                delta_q = particle_i + DELTA_Q_ADD;
+                delta_q = particle_i.clone().add(DELTA_Q_ADD);
                 if (TENSILE_INSTABILITY) {
                     s_corr = Math.pow(-CONST_K * (W(particle_ij_sub, CONST_H) / W(delta_q, CONST_H)), CONST_N);
                 } else {
