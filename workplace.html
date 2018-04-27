@@ -30,9 +30,9 @@ window.requestAnimFrame = (function(){
 })();
 
 // CONSTANT
-solverIteration = 10;
+solverIteration = 4;
 CONST_H = 0.1; // TODO - make sure to test and change
-ETA = 0.1; // TODO -- make sure to test and change
+EPSILON = 0.1; // TODO -- make sure to test and change
 REST_DENSITY = 0.1; // TODO -- make sure to test and change
 TIMESTEP = 0.1; // TODO -- change as needed
 PARTICLE_COUNT = 500;
@@ -40,9 +40,11 @@ MASS = 1;
 GRID_SIZE = 100;
 CONST_K = 0.1;
 CONST_N = 4;
+CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
 
 TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
+VORTICITY_EFFECT = false;
 
 // Set the scene size.
 const WIDTH = window.innerWidth;
@@ -155,7 +157,9 @@ function W(r, h) {
     } else {
         multiplier = 0;
     }
-    return (315 / (64 * Math.PI * Math.pow(h, 9))) * multiplier;
+    var res = (315 / (64 * Math.PI * Math.pow(h, 9))) * multiplier
+    console.log(res);
+    return res;
 }
 
 function deltaW(r, h) {
@@ -232,24 +236,25 @@ function update() {
             }
 
 
-            particle.lambda = -1 * (C_i / (denom_sum + ETA));
+            particle.lambda = -1 * (C_i / (denom_sum + EPSILON));
         }
 
         // L12-15
         for (let particle_i of particleIterator()) {
-            result = 0;
+            delta_p_i = new THREE.Vector3();
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 particle_ij_sub = particle_i.clone().sub(particle_j);
                 delta_q = particle_i.clone().add(DELTA_Q_ADD);
                 if (TENSILE_INSTABILITY) {
-                    s_corr = Math.pow(-CONST_K * (W(particle_ij_sub, CONST_H) / W(delta_q, CONST_H)), CONST_N);
+                    s_corr = Math.pow(-CONST_K * (W(particle_ij_sub, CONST_H) / W(DELTA_Q_ADD, CONST_H)), CONST_N);
+                    // TODO -- confirm if delta_q should be delta_q_add or delta_q
                 } else {
                     s_corr = 0;
                 }
-                result = deltaW(particle_ij_sub, CONST_H).multiplyScalar(particle_i.lambda + particle_j.lambda + s_corr);
+                delta_p_i.add(deltaW(particle_ij_sub, CONST_H).multiplyScalar(particle_i.lambda + particle_j.lambda + s_corr));
             }
 
-            particle_i.delta = result.multiplyScalar(1/REST_DENSITY);
+            particle_i.delta = delta_p_i.multiplyScalar(1/REST_DENSITY);
 
             // TODO - L14 - PERFORM COLLISION DETECTION AND RESPONSE
         }
@@ -261,17 +266,48 @@ function update() {
     }
 
     // console.log("particle", particles);
+    var eta;
+    var big_N;
+    var f_vorticity;
 
-    for (let particle of particleIterator()) {
-        // console.log(particle);
-        particle.velocity = particle.newPosition.clone().sub(particle).multiplyScalar(1 / TIMESTEP);
+    for (let particle_i of particleIterator()) {
+        // console.log(particle_i);
+        particle_i.velocity = particle_i.newPosition.clone().sub(particle_i).multiplyScalar(1 / TIMESTEP);
 
         // TODO -- L22 - APPLY VORTIICITY CONFINEMENT AND XSPH VISCOSCITY
 
+        // EQ (15-16)
+        if (VORTICITY_EFFECT) {
+            // TODO -- not done at all
+            omega_i = new THREE.Vector3();
+            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+                v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
+                v_ij.multiply(deltaW(particle_j.clone().sub(particle_i), CONST_H));
+                omega_i.add(v_ij);
+            }
 
-        particle.x = particle.newPosition.x;
-        particle.y = particle.newPosition.y;
-        particle.z = particle.newPosition.z;
+            eta = new THREE.Vector3(omega_i.length(), omega_i.length(), omega_i.length());
+
+            big_N = eta.clone().multiplyScalar(1 / eta.length());
+
+            f_vorticity = big_N.multiply(omega_i).multiplyScalar(EPSILON);
+
+        }
+
+        // TODO - no idea where to apply f_vorticity
+
+        // CALCULATING XSPH VISCOSITY -- EQ (17)
+        var v_new_sum = 0;
+        for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+            v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
+            v_new_sum += v_ij.dot(W(particle_j.clone().sub(particle_i), CONST_H));
+        }
+
+        particle_i.velocity = particle_i.velocity + (CONST_c * v_new_sum);
+
+        particle_i.x = particle_i.newPosition.x;
+        particle_i.y = particle_i.newPosition.y;
+        particle_i.z = particle_i.newPosition.z;
     }
 
     // flag to the particle system that we've
