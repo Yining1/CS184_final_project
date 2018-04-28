@@ -44,7 +44,7 @@ CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
 
 TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
-VORTICITY_EFFECT = false;
+VORTICITY_EFFECT = true;
 
 // Set the scene size.
 const WIDTH = window.innerWidth;
@@ -122,6 +122,8 @@ for(var p = 0; p < particleCount; p++) {
     particle.mass = MASS;
     // add it to the geometry
     particles.vertices.push(particle);
+
+    particle.external_force = new THREE.Vector3(0, -9.8, 0);
 }
 
 // create the particle system
@@ -178,16 +180,18 @@ function deltaW(r, h) {
 
 console.log("friendly reminder that you're using testbox as boundaries for spatial map."); // TODO -- as written
 
-function force_external(x) {
-    return new THREE.Vector3(0, -9.8, 0);
-}
+// function force_external(x) {
+//     var result = new THREE.Vector3(0, -9.8, 0);
+//     result.add(x.external_force);
+//     return result;
+// }
 
 updateCt = 0;
 // animation loop
 function update() {
 
-    console.log("update: ", updateCt);
-    console.log("particles: ", particles);
+    // console.log("update: ", updateCt);
+    // console.log("particles: ", particles);
 
     updateCt += 1;
     // if (updateCt % 100 == 0) {
@@ -198,7 +202,9 @@ function update() {
     // L1-4
     for (let particle of particleIterator()) {
         // console.log(particle);
-        particle.velocity.add(force_external(particle).multiplyScalar(TIMESTEP));
+        // console.log("ef", particle.external_force);
+        // console.log("fe", force_external(particle));
+        particle.velocity.add(particle.external_force.clone().multiplyScalar(TIMESTEP));
         particle.newPosition = particle.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
         // console.log(particle);
     }
@@ -271,7 +277,7 @@ function update() {
     var f_vorticity;
 
     for (let particle_i of particleIterator()) {
-        // console.log(particle_i);
+        // UPDATE VELOCITY -- L21
         particle_i.velocity = particle_i.newPosition.clone().sub(particle_i).multiplyScalar(1 / TIMESTEP);
 
         // TODO -- L22 - APPLY VORTIICITY CONFINEMENT AND XSPH VISCOSCITY
@@ -292,9 +298,9 @@ function update() {
 
             f_vorticity = big_N.multiply(omega_i).multiplyScalar(EPSILON);
 
-        }
+            particle_i.external_force.add(f_vorticity);
 
-        // TODO - no idea where to apply f_vorticity
+        }
 
         // CALCULATING XSPH VISCOSITY -- EQ (17)
         var v_new_sum = new THREE.Vector3();
