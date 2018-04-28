@@ -47,9 +47,15 @@ function __spatial_map_hash(x, y, z, width, height, depth, gridDimension) {
 }
 
 function getCoordThisMap(particle, map) {
+    // console.log(map);
     return __spatial_map_hash(particle.x - map.minPt.x, particle.y - map.minPt.y, particle.z - map.minPt.z, map.width, map.height, map.depth, map.gridDimension);
 }
 
 function getNeighborsThisMap(particle, map) {
-    return map.get(getCoordThisMap(particle, map));
+    // console.log("particle", particle);
+    var coord = getCoordThisMap(particle, map);
+    // console.log("coord", coord);
+    var res = map.get(coord);
+    // console.log(res);
+    return res;
 }

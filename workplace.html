@@ -13,7 +13,7 @@
 </head>
 <body>
 <div id="container"></div>
-<script src="three/three.min.js"></script>
+<script src="js/three.min.js"></script>
 <script src="waka.js"></script>
 <script src="spatialhash.js/dist/spatialhash.js"></script>
 <script>
@@ -35,16 +35,17 @@ CONST_H = 0.1; // TODO - make sure to test and change
 EPSILON = 0.1; // TODO -- make sure to test and change
 REST_DENSITY = 0.1; // TODO -- make sure to test and change
 TIMESTEP = 0.1; // TODO -- change as needed
-PARTICLE_COUNT = 500;
+PARTICLE_PER_SIDE = 7;
 MASS = 1;
-GRID_SIZE = 10;
+GRID_SIZE = 5;
 CONST_K = 0.1;
 CONST_N = 4;
 CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
 
 TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
-VORTICITY_EFFECT = true;
+VORTICITY_EFFECT = false;
+VISCOSITY_EFFECT = false;
 
 // Set the scene size.
 const WIDTH = window.innerWidth;
@@ -97,7 +98,7 @@ container.appendChild(renderer.domElement);
 
 
 // create the particle variables
-var particleCount = PARTICLE_COUNT,
+var particleCount = PARTICLE_PER_SIDE,
     particles = new THREE.Geometry(),
     pMaterial = new THREE.PointsMaterial({
         size: 20,
@@ -105,26 +106,49 @@ var particleCount = PARTICLE_COUNT,
     });
 
 /// now create the individual particles
+
 for(var p = 0; p < particleCount; p++) {
-
-    // create a particle with random
-    // position values, -250 -> 250
-    var pX = Math.random() * 500 - 250,
-        pY = 50,
-        pZ = Math.random() * 500 - 250,
+  for (var q = 0; q < particleCount; q++) {
+    for (var r = 0; r < particleCount; r++) {
+      // create a particle with random
+      // position values, -250 -> 250
+      var pX = p - (particleCount / 2.0)
+        pY = q - (particleCount / 2.0),
+        pZ = r - 400,
         particle = new THREE.Vector3(pX, pY, pZ);
-    // create a velocity vector
-    particle.velocity = new THREE.Vector3(
-        0,				// x
-        0,	            // y
-        0);				// z
+      // create a velocity vector
+      particle.velocity = new THREE.Vector3(0, 0, 0);       // z
 
-    particle.mass = MASS;
-    // add it to the geometry
-    particles.vertices.push(particle);
+      particle.mass = MASS;
+      particle.external_force = new THREE.Vector3(0, -9.8, 0);
 
-    particle.external_force = new THREE.Vector3(0, -9.8, 0);
+      // add it to the geometry
+      particles.vertices.push(particle);
+    }
+  }
 }
+
+console.log("particles:", particles);
+// for(var p = 0; p < particleCount; p++) {
+//
+//     // create a particle with random
+//     // position values, -250 -> 250
+//     var pX = Math.random() * 500 - 250,
+//         pY = 50,
+//         pZ = Math.random() * 500 - 250,
+//         particle = new THREE.Vector3(pX, pY, pZ);
+//     // create a velocity vector
+//     particle.velocity = new THREE.Vector3(
+//         0,				// x
+//         0,	            // y
+//         0);				// z
+//
+//     particle.mass = MASS;
+//     // add it to the geometry
+//     particles.vertices.push(particle);
+//
+//     particle.external_force = new THREE.Vector3(0, -9.8, 0);
+// }
 
 // create the particle system
 var particleSystem = new THREE.Points(
@@ -138,11 +162,12 @@ scene.add(particleSystem);
 // TESTING
 // console.log(spatial_map_hash(0.1, 0.2, 0.3, 1, 1, 1, 0.1)); => 1,2,3
 
-testBox = new THREE.BoxGeometry(600, 600, 600);
+testBox = new THREE.BoxGeometry(1000, 1000, 1000);
 testBox.computeBoundingBox();
 
 function* particleIterator() {
-    var pCount = particleCount;
+    var pCount = particles.vertices.length;
+    // console.log(particles);
     while(pCount--) {
         // get the particle
         particle = particles.vertices[pCount];
@@ -197,7 +222,7 @@ function update() {
     // if (updateCt % 100 == 0) {
     //         console.log("update frame: ", updateCt);
     // }
-    neighborsMap = build_spatial_map(particles, particleCount, testBox, GRID_SIZE);
+    neighborsMap = build_spatial_map(particles, particles.vertices.length, testBox, GRID_SIZE);
 
     // L1-4
     for (let particle of particleIterator()) {
@@ -303,14 +328,16 @@ function update() {
         }
 
         // CALCULATING XSPH VISCOSITY -- EQ (17)
-        var v_new_sum = new THREE.Vector3();
-        for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
-            // console.log(particle_j);
-            v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
-            v_new_sum.add(v_ij.multiplyScalar(W(particle_j.clone().sub(particle_i), CONST_H)));
-        }
+        if (VISCOSITY_EFFECT) {
+            var v_new_sum = new THREE.Vector3();
+            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+                // console.log(particle_j);
+                v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
+                v_new_sum.add(v_ij.multiplyScalar(W(particle_j.clone().sub(particle_i), CONST_H)));
+            }
 
-        particle_i.velocity.add(v_new_sum.multiplyScalar(CONST_c));
+            particle_i.velocity.add(v_new_sum.multiplyScalar(CONST_c));
+        }
 
         particle_i.x = particle_i.newPosition.x;
         particle_i.y = particle_i.newPosition.y;
