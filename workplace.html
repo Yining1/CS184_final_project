@@ -35,7 +35,7 @@ CONST_H = 0.1; // TODO - make sure to test and change
 EPSILON = 0.1; // TODO -- make sure to test and change
 REST_DENSITY = 0.1; // TODO -- make sure to test and change
 TIMESTEP = 0.1; // TODO -- change as needed
-PARTICLE_PER_SIDE = 7;
+PARTICLE_PER_SIDE = 11;
 MASS = 1;
 GRID_SIZE = 5;
 CONST_K = 0.1;
@@ -101,7 +101,7 @@ container.appendChild(renderer.domElement);
 var particleCount = PARTICLE_PER_SIDE,
     particles = new THREE.Geometry(),
     pMaterial = new THREE.PointsMaterial({
-        size: 20,
+        size: 10,
         color: 0xFFFFFF
     });
 
@@ -216,7 +216,11 @@ updateCt = 0;
 function update() {
 
     // console.log("update: ", updateCt);
-    // console.log("particles: ", particles);
+    // // console.log("particles: ", particles);
+    //
+    // if (updateCt == 47) {
+    //     console.log("hammertime");
+    // }
 
     updateCt += 1;
     // if (updateCt % 100 == 0) {
@@ -229,7 +233,12 @@ function update() {
         // console.log(particle);
         // console.log("ef", particle.external_force);
         // console.log("fe", force_external(particle));
+
         particle.velocity.add(particle.external_force.clone().multiplyScalar(TIMESTEP));
+        if (particle.y <= -100) {
+            particle.velocity.y = 0;
+        }
+        console.log(particle.velocity);
         particle.newPosition = particle.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
         // console.log(particle);
     }
@@ -310,6 +319,9 @@ function update() {
         // EQ (15-16)
         if (VORTICITY_EFFECT) {
             // TODO -- not done at all
+            // if (updateCt >= 32) {
+            //     console.log("why");
+            // }
             omega_i = new THREE.Vector3();
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
@@ -323,8 +335,15 @@ function update() {
 
             f_vorticity = big_N.multiply(omega_i).multiplyScalar(EPSILON);
 
-            particle_i.external_force.add(f_vorticity);
+            // if (f_vorticity.y > 1000) {
+            //     console.log("stop");
+            // }
 
+            particle_i.external_force.add(f_vorticity);
+            // if (updateCt >= 47) {
+            // console.log("f_vorticity", f_vorticity);
+            // console.log("particle_i.external_force", particle_i.external_force);
+            // }
         }
 
         // CALCULATING XSPH VISCOSITY -- EQ (17)
