@@ -35,7 +35,7 @@ CONST_H = 3; // TODO - make sure to test and change
 EPSILON = 0.1; // TODO -- make sure to test and change
 REST_DENSITY = 0.1; // TODO -- make sure to test and change
 TIMESTEP = 0.01; // TODO -- change as needed
-PARTICLE_PER_SIDE = 4;
+PARTICLE_PER_SIDE = 9;
 MASS = 1;
 GRID_SIZE = 5;
 CONST_K = 0.1;
@@ -259,7 +259,7 @@ function update() {
         for (let particle_i of particleIterator()) {
             // calculating C_i(p_1, ..., p_n)
             var p_i = 0; // (1) and (2)
-            for (let particle_j of particleIterator()) {
+            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 // console.log("la", particle_j);
                 var y = W(particle_j.clone().sub(particle_i), CONST_H);
                 // if (y.x != 0 || y.z != 0) {
@@ -274,10 +274,10 @@ function update() {
             // calculating denominator
             var denom_sum = 0;
             // console.log("k", particle_i);
-            for (let particle_k of particleIterator()) {
+            for (let particle_k of getNeighborsThisMap(particle_i, neighborsMap)) {
                 var multiplier = new THREE.Vector3();
                 if (particle_k == particle_i) {
-                    for (let particle_j of particleIterator()) {
+                    for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                         var temp_ij1 = particle_i.clone().sub(particle_j);
                         var x = deltaW(temp_ij1, CONST_H);
                         // if ((updateCt >= 45) && (temp_ij1.x != 0 || temp_ij1.z != 0)) {
@@ -305,7 +305,7 @@ function update() {
         // L12-15
         for (let particle_i of particleIterator()) {
             delta_p_i = new THREE.Vector3();
-            for (let particle_j of particleIterator()) {
+            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 particle_ij_sub = particle_i.clone().sub(particle_j);
                 delta_q = particle_i.clone().add(DELTA_Q_ADD);
                 if (TENSILE_INSTABILITY) {
@@ -346,7 +346,7 @@ function update() {
             //     console.log("why");
             // }
             omega_i = new THREE.Vector3();
-            for (let particle_j of particleIterator()) {
+            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
                 v_ij.multiply(deltaW(particle_j.clone().sub(particle_i), CONST_H));
                 omega_i.add(v_ij);
@@ -372,7 +372,7 @@ function update() {
         // CALCULATING XSPH VISCOSITY -- EQ (17)
         if (VISCOSITY_EFFECT) {
             var v_new_sum = new THREE.Vector3();
-            for (let particle_j of particleIterator()) {
+            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 // console.log(particle_j);
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
                 v_new_sum.add(v_ij.multiplyScalar(W(particle_j.clone().sub(particle_i), CONST_H)));
