@@ -31,17 +31,25 @@ window.requestAnimFrame = (function(){
 
 // CONSTANT
 solverIteration = 4;
-CONST_H = 0.1; // TODO - make sure to test and change
+CONST_H = 3; // TODO - make sure to test and change
 EPSILON = 0.1; // TODO -- make sure to test and change
 REST_DENSITY = 0.1; // TODO -- make sure to test and change
-TIMESTEP = 0.1; // TODO -- change as needed
-PARTICLE_PER_SIDE = 11;
+TIMESTEP = 0.01; // TODO -- change as needed
+PARTICLE_PER_SIDE = 4;
 MASS = 1;
 GRID_SIZE = 5;
 CONST_K = 0.1;
 CONST_N = 4;
 CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
+
+LEFT_X = -100;
+RIGHT_X = 100;
+DOWN_Y = -100;
+UP_Y = -100;
+FRONT_Z = -300;
+BACK_Z = -500;
+
 
 TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
 VORTICITY_EFFECT = false;
@@ -107,14 +115,16 @@ var particleCount = PARTICLE_PER_SIDE,
 
 /// now create the individual particles
 
+var spacer = 2
+
 for(var p = 0; p < particleCount; p++) {
   for (var q = 0; q < particleCount; q++) {
     for (var r = 0; r < particleCount; r++) {
       // create a particle with random
       // position values, -250 -> 250
-      var pX = p - (particleCount / 2.0)
-        pY = q - (particleCount / 2.0),
-        pZ = r - 400,
+      var pX = (p - (particleCount / 2.0)) * spacer,
+        pY = (q - (particleCount / 2.0)) * spacer,
+        pZ = (r - 400) * spacer,
         particle = new THREE.Vector3(pX, pY, pZ);
       // create a velocity vector
       particle.velocity = new THREE.Vector3(0, 0, 0);       // z
@@ -190,6 +200,7 @@ function W(r, h) {
 }
 
 function deltaW(r, h) {
+    // console.log(r);
     // TODO - absolutely copy pasted, so be careful
     var multiplier;
     if (0 <= r.length() & r.length() <= h) {
@@ -197,8 +208,12 @@ function deltaW(r, h) {
     } else {
         multiplier = new THREE.Vector3();
     }
-    return multiplier.multiplyScalar(-1 * (45 / (Math.PI * Math.pow(h, 6))));
-
+    var res = multiplier.multiplyScalar(-1 * (45.0 / (Math.PI * Math.pow(h, 6))));
+    // if (res.length() > 0) {
+    //     console.log("r", r);
+    //     console.log("res", res);
+    // }
+    return res;
 }
 
 
@@ -223,10 +238,6 @@ function update() {
     // }
 
     updateCt += 1;
-    // if (updateCt % 100 == 0) {
-    //         console.log("update frame: ", updateCt);
-    // }
-    neighborsMap = build_spatial_map(particles, particles.vertices.length, testBox, GRID_SIZE);
 
     // L1-4
     for (let particle of particleIterator()) {
@@ -235,13 +246,12 @@ function update() {
         // console.log("fe", force_external(particle));
 
         particle.velocity.add(particle.external_force.clone().multiplyScalar(TIMESTEP));
-        if (particle.y <= -100) {
-            particle.velocity.y = 0;
-        }
-        console.log(particle.velocity);
         particle.newPosition = particle.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
         // console.log(particle);
     }
+
+    neighborsMap = build_spatial_map(particles, particles.vertices.length, testBox, GRID_SIZE);
+
 
     // L8-19
     for(var i=0; i < solverIteration; i++){
@@ -249,9 +259,13 @@ function update() {
         for (let particle_i of particleIterator()) {
             // calculating C_i(p_1, ..., p_n)
             var p_i = 0; // (1) and (2)
-            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+            for (let particle_j of particleIterator()) {
                 // console.log("la", particle_j);
-                p_i += particle_j.mass * W(particle_j.clone().sub(particle_i), CONST_H);
+                var y = W(particle_j.clone().sub(particle_i), CONST_H);
+                // if (y.x != 0 || y.z != 0) {
+                //     console.log("y", y);
+                // }
+                p_i += particle_j.mass * y;
                 // console.log("lb", particle_j);
             }
             var p_0 = REST_DENSITY; // TODO -- what should this be? corresponds to (1)
@@ -260,14 +274,23 @@ function update() {
             // calculating denominator
             var denom_sum = 0;
             // console.log("k", particle_i);
-            for (let particle_k of getNeighborsThisMap(particle_i, neighborsMap)) {
+            for (let particle_k of particleIterator()) {
                 var multiplier = new THREE.Vector3();
                 if (particle_k == particle_i) {
-                    for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
-                        multiplier.add(deltaW(particle_i.clone().sub(particle_j), CONST_H));
+                    for (let particle_j of particleIterator()) {
+                        var temp_ij1 = particle_i.clone().sub(particle_j);
+                        var x = deltaW(temp_ij1, CONST_H);
+                        // if ((updateCt >= 45) && (temp_ij1.x != 0 || temp_ij1.z != 0)) {
+                        //     console.log("temp_ij1", temp_ij1);
+                        // }
+                        multiplier.add(x);
                     }
                 } else { // then it's a neighbor of particle_i
-                    multiplier = deltaW(particle_i.clone().sub(particle_k), CONST_H);
+                    var x = deltaW(particle_i.clone().sub(particle_k), CONST_H);
+                    // if (x.x != 0 || x.z != 0) {
+                    //     console.log("x", x);
+                    // }
+                    multiplier = x;
                 }
 
 
@@ -282,7 +305,7 @@ function update() {
         // L12-15
         for (let particle_i of particleIterator()) {
             delta_p_i = new THREE.Vector3();
-            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+            for (let particle_j of particleIterator()) {
                 particle_ij_sub = particle_i.clone().sub(particle_j);
                 delta_q = particle_i.clone().add(DELTA_Q_ADD);
                 if (TENSILE_INSTABILITY) {
@@ -323,7 +346,7 @@ function update() {
             //     console.log("why");
             // }
             omega_i = new THREE.Vector3();
-            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+            for (let particle_j of particleIterator()) {
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
                 v_ij.multiply(deltaW(particle_j.clone().sub(particle_i), CONST_H));
                 omega_i.add(v_ij);
@@ -349,7 +372,7 @@ function update() {
         // CALCULATING XSPH VISCOSITY -- EQ (17)
         if (VISCOSITY_EFFECT) {
             var v_new_sum = new THREE.Vector3();
-            for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+            for (let particle_j of particleIterator()) {
                 // console.log(particle_j);
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
                 v_new_sum.add(v_ij.multiplyScalar(W(particle_j.clone().sub(particle_i), CONST_H)));
@@ -357,6 +380,27 @@ function update() {
 
             particle_i.velocity.add(v_new_sum.multiplyScalar(CONST_c));
         }
+
+        if (particle_i.newPosition.y <= -100) {
+            particle_i.newPosition.y = -100;
+        }
+        // if (particle_i.newPosition.y >= 100) {
+        //     particle_i.newPosition.y = 100;
+        // }
+        // if (particle_i.newPosition.x <= -100) {
+        //     particle_i.newPosition.x = -100;
+        // }
+        // if (particle_i.newPosition.x >= 100) {
+        //     particle_i.newPosition.x = 100;
+        // }
+        //
+        // if (particle_i.newPosition.z <= -500) {
+        //     particle_i.newPosition.z = -500;
+        // }
+        //
+        // if (particle_i.newPosition.z >= -300) {
+        //     particle_i.newPosition.z = -300;
+        // }
 
         particle_i.x = particle_i.newPosition.x;
         particle_i.y = particle_i.newPosition.y;
