@@ -37,15 +37,17 @@ REST_DENSITY = 0.1; // TODO -- make sure to test and change
 TIMESTEP = 0.1; // TODO -- change as needed
 PARTICLE_PER_SIDE = 9;
 MASS = 1;
-GRID_SIZE = 10;
+GRID_SIZE = 9;
 CONST_K = 0.1;
 CONST_N = 4;
 CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
 SURFACE_OFFSET = 0.001;
 CONST_FRICTION = 0.001;
+DEBUG = false;
+CENTER_BOX = -400;
 
-TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
+TENSILE_INSTABILITY = false; // pls check if this is used for anything first before you depend on this lmao
 VORTICITY_EFFECT = false;
 VISCOSITY_EFFECT = false;
 
@@ -75,6 +77,12 @@ const camera =
     );
 
 const scene = new THREE.Scene();
+
+if (DEBUG) {
+    camera.translateY(-70);
+    camera.translateZ(-100);
+    camera.zoom = 1.5;
+}
 
 // Add the camera to the scene.
 scene.add(camera);
@@ -106,7 +114,7 @@ var particleCount = PARTICLE_PER_SIDE,
         color: 0xFFFFFF
     });
 /// now create the individual particles
-var spacer = 2;
+var spacer = 1;
 for(var p = 0; p < particleCount; p++) {
   for (var q = 0; q < particleCount; q++) {
     for (var r = 0; r < particleCount; r++) {
@@ -114,7 +122,7 @@ for(var p = 0; p < particleCount; p++) {
       // position values, -250 -> 250
       var pX = (p - (particleCount / 2.0)) * spacer,
         pY = (q - (particleCount / 2.0)) * spacer,
-        pZ = (r - 200) * spacer,
+        pZ = (r - (particleCount / 2.0)) * spacer + CENTER_BOX,
         particle = new THREE.Vector3(pX, pY, pZ);
       // create a velocity vector
       particle.velocity = new THREE.Vector3(0, 0, 0);       // z
@@ -516,9 +524,6 @@ function update() {
         //
         //     particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
         // }
-
-
-
 
 
         particle_i.x = particle_i.newPosition.x;
