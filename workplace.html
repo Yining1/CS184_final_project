@@ -15,7 +15,7 @@
 <div id="container"></div>
 <script src="js/three.min.js"></script>
 <script src="waka.js"></script>
-<script src="spatialhash.js/dist/spatialhash.js"></script>
+<!-- <script src="spatialhash.js/dist/spatialhash.js"></script> -->
 <script>
 // @see http://paulirish.com/2011/requestanimationframe-for-smart-animating/
 window.requestAnimFrame = (function(){
@@ -31,10 +31,10 @@ window.requestAnimFrame = (function(){
 
 // CONSTANT
 solverIteration = 4;
-CONST_H = 3; // TODO - make sure to test and change
+CONST_H = 0.5; // TODO - make sure to test and change
 EPSILON = 0.1; // TODO -- make sure to test and change
 REST_DENSITY = 0.1; // TODO -- make sure to test and change
-TIMESTEP = 0.01; // TODO -- change as needed
+TIMESTEP = 0.1; // TODO -- change as needed
 PARTICLE_PER_SIDE = 9;
 MASS = 1;
 GRID_SIZE = 5;
@@ -51,7 +51,9 @@ FRONT_Z = -300;
 BACK_Z = -500;
 
 
-TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
+
+
+TENSILE_INSTABILITY = false; // pls check if this is used for anything first before you depend on this lmao
 VORTICITY_EFFECT = false;
 VISCOSITY_EFFECT = false;
 
@@ -104,7 +106,6 @@ container.appendChild(renderer.domElement);
 // // add to the scene
 // scene.add(pointLight);
 
-
 // create the particle variables
 var particleCount = PARTICLE_PER_SIDE,
     particles = new THREE.Geometry(),
@@ -115,7 +116,7 @@ var particleCount = PARTICLE_PER_SIDE,
 
 /// now create the individual particles
 
-var spacer = 2
+var spacer = 2;
 
 for(var p = 0; p < particleCount; p++) {
   for (var q = 0; q < particleCount; q++) {
@@ -124,7 +125,7 @@ for(var p = 0; p < particleCount; p++) {
       // position values, -250 -> 250
       var pX = (p - (particleCount / 2.0)) * spacer,
         pY = (q - (particleCount / 2.0)) * spacer,
-        pZ = (r - 400) * spacer,
+        pZ = (r - 200) * spacer,
         particle = new THREE.Vector3(pX, pY, pZ);
       // create a velocity vector
       particle.velocity = new THREE.Vector3(0, 0, 0);       // z
@@ -168,12 +169,33 @@ var particleSystem = new THREE.Points(
 // add it to the scene
 scene.add(particleSystem);
 
-
 // TESTING
 // console.log(spatial_map_hash(0.1, 0.2, 0.3, 1, 1, 1, 0.1)); => 1,2,3
 
-testBox = new THREE.BoxGeometry(1000, 1000, 1000);
+testBox = new THREE.BoxGeometry(200, 200, 200);
+// var geometry = new THREE.BoxGeometry(200, 200, 200);
+var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+material.wireframe = true;
+var cube = new THREE.Mesh(testBox, material);
+cube.position.z = -400;
+scene.add(cube);
 testBox.computeBoundingBox();
+testBox.boundingBox.translate(cube.position);
+
+// FACE REFERENCES:
+// [0-1] = right face
+// [2-3] = left face
+// [4-5] = top face
+// [6-7] = bottom face
+// [8-9] = back
+// [10-11] = front
+
+RIGHT_FACE = testBox.faces[0]
+LEFT_FACE = testBox.faces[2]
+TOP_FACE = testBox.faces[4]
+BOTTOM_FACE = testBox.faces[6]
+BACK_FACE = testBox.faces[8]
+FRONT_FACE = testBox.faces[10]
 
 function* particleIterator() {
     var pCount = particles.vertices.length;
@@ -260,6 +282,9 @@ function update() {
             // calculating C_i(p_1, ..., p_n)
             var p_i = 0; // (1) and (2)
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+                if (particle_i == particle_j) {
+                    continue;
+                }
                 // console.log("la", particle_j);
                 var y = W(particle_j.clone().sub(particle_i), CONST_H);
                 // if (y.x != 0 || y.z != 0) {
@@ -278,6 +303,9 @@ function update() {
                 var multiplier = new THREE.Vector3();
                 if (particle_k == particle_i) {
                     for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+                        if (particle_i == particle_j) {
+                            continue;
+                        }
                         var temp_ij1 = particle_i.clone().sub(particle_j);
                         var x = deltaW(temp_ij1, CONST_H);
                         // if ((updateCt >= 45) && (temp_ij1.x != 0 || temp_ij1.z != 0)) {
@@ -288,7 +316,7 @@ function update() {
                 } else { // then it's a neighbor of particle_i
                     var x = deltaW(particle_i.clone().sub(particle_k), CONST_H);
                     // if (x.x != 0 || x.z != 0) {
-                    //     console.log("x", x);
+                    //     console.log("x", x)
                     // }
                     multiplier = x;
                 }
@@ -306,6 +334,9 @@ function update() {
         for (let particle_i of particleIterator()) {
             delta_p_i = new THREE.Vector3();
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
+                if (particle_i == particle_j) {
+                    continue;
+                }
                 particle_ij_sub = particle_i.clone().sub(particle_j);
                 delta_q = particle_i.clone().add(DELTA_Q_ADD);
                 if (TENSILE_INSTABILITY) {
@@ -320,6 +351,24 @@ function update() {
             particle_i.delta = delta_p_i.multiplyScalar(1/REST_DENSITY);
 
             // TODO - L14 - PERFORM COLLISION DETECTION AND RESPONSE
+
+            // if (particle_i.newPosition.y <= testBox.boundingBox.min.y) {
+            //     console.log("let's fight");
+            // }
+            ray = new THREE.Ray(particle_i, particle_i.newPosition.clone().normalize());
+            qc = new THREE.Vector3();
+            ray.intersectBox(testBox.boundingBox, qc);
+
+            constraint_2 = particle_i.newPosition.clone().sub(qc).dot(BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            if (constraint_2 >= 0) {
+                // particle_i.delta.set(0, 0, 0);
+                // console.log("hahah");
+            } else {
+                newnew = (new THREE.Vector3(constraint_2, constraint_2, constraint_2)).multiplyScalar(-1 * particle_i.lambda * (1/particle_i.mass));
+                particle_i.delta.add(newnew);
+            }
+
+
         }
 
         // L16-18
@@ -381,9 +430,9 @@ function update() {
             particle_i.velocity.add(v_new_sum.multiplyScalar(CONST_c));
         }
 
-        if (particle_i.newPosition.y <= -100) {
-            particle_i.newPosition.y = -100;
-        }
+        // if (particle_i.newPosition.y <= -100) {
+        //     particle_i.newPosition.y = -100;
+        // }
         // if (particle_i.newPosition.y >= 100) {
         //     particle_i.newPosition.y = 100;
         // }
