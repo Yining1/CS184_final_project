@@ -31,21 +31,26 @@ window.requestAnimFrame = (function(){
 
 // CONSTANT
 solverIteration = 4;
-CONST_H = 0.5; // TODO - make sure to test and change
+CONST_H = 0.2; // TODO - make sure to test and change
 EPSILON = 0.1; // TODO -- make sure to test and change
 REST_DENSITY = 0.1; // TODO -- make sure to test and change
-TIMESTEP = 0.1; // TODO -- change as needed
-PARTICLE_PER_SIDE = 9;
+TIMESTEP = 0.01; // TODO -- change as needed
+PARTICLE_PER_SIDE = 6;
 MASS = 1;
-GRID_SIZE = 9;
+GRID_SIZE = 10;
 CONST_K = 0.1;
 CONST_N = 4;
 CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
 SURFACE_OFFSET = 0.001;
-CONST_FRICTION = 0.001;
-DEBUG = false;
+CONST_FRICTION = 0.0;
+DEBUG = true;
 CENTER_BOX = -400;
+BOX_SIDE_LENGTH = 20;
+DEBUG_W = false;
+DEBUG_DELTA_W = false;
+PARTICLE_SPACING = 0.5;
+PARTICLE_DISPLACING = 0.01;
 
 TENSILE_INSTABILITY = false; // pls check if this is used for anything first before you depend on this lmao
 VORTICITY_EFFECT = false;
@@ -79,9 +84,9 @@ const camera =
 const scene = new THREE.Scene();
 
 if (DEBUG) {
-    camera.translateY(-70);
-    camera.translateZ(-100);
-    camera.zoom = 1.5;
+    camera.translateY(-5);
+    camera.translateZ(-355);
+    camera.zoom = 2;
 }
 
 // Add the camera to the scene.
@@ -110,19 +115,19 @@ container.appendChild(renderer.domElement);
 var particleCount = PARTICLE_PER_SIDE,
     particles = new THREE.Geometry(),
     pMaterial = new THREE.PointsMaterial({
-        size: 10,
+        size: 1,
         color: 0xFFFFFF
     });
 /// now create the individual particles
-var spacer = 1;
+var spacer = PARTICLE_SPACING;
 for(var p = 0; p < particleCount; p++) {
   for (var q = 0; q < particleCount; q++) {
     for (var r = 0; r < particleCount; r++) {
       // create a particle with random
       // position values, -250 -> 250
-      var pX = (p - (particleCount / 2.0)) * spacer,
+      var pX = (p - (particleCount / 2.0)) * spacer + (Math.random() * PARTICLE_DISPLACING),
         pY = (q - (particleCount / 2.0)) * spacer,
-        pZ = (r - (particleCount / 2.0)) * spacer + CENTER_BOX,
+        pZ = (r - (particleCount / 2.0)) * spacer + (Math.random() * PARTICLE_DISPLACING) + CENTER_BOX,
         particle = new THREE.Vector3(pX, pY, pZ);
       // create a velocity vector
       particle.velocity = new THREE.Vector3(0, 0, 0);       // z
@@ -167,12 +172,12 @@ scene.add(particleSystem);
 // TESTING
 // console.log(spatial_map_hash(0.1, 0.2, 0.3, 1, 1, 1, 0.1)); => 1,2,3
 
-testBox = new THREE.BoxGeometry(200, 200, 200);
+testBox = new THREE.BoxGeometry(BOX_SIDE_LENGTH, BOX_SIDE_LENGTH, BOX_SIDE_LENGTH);
 // var geometry = new THREE.BoxGeometry(200, 200, 200);
 var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 material.wireframe = true;
 var cube = new THREE.Mesh(testBox, material);
-cube.position.z = -400;
+cube.position.z = CENTER_BOX;
 scene.add(cube);
 testBox.computeBoundingBox();
 testBox.boundingBox.translate(cube.position);
@@ -220,6 +225,9 @@ function W(r, h) {
     }
     var res = (315 / (64 * Math.PI * Math.pow(h, 9))) * multiplier
     // console.log(res);
+    if (DEBUG_W) {
+        console.log(res);
+    }
     return res;
 }
 
@@ -233,10 +241,12 @@ function deltaW(r, h) {
         multiplier = new THREE.Vector3();
     }
     var res = multiplier.multiplyScalar(-1 * (45.0 / (Math.PI * Math.pow(h, 6))));
-    // if (res.length() > 0) {
-    //     console.log("r", r);
-    //     console.log("res", res);
-    // }
+    if (DEBUG_DELTA_W) {
+        console.log(res.x, res.y, res.z);
+        if (res.y > 0) {
+            console.log("what");
+        }
+    }
     return res;
 }
 
@@ -282,6 +292,9 @@ function update() {
         // L9-11
         for (let particle_i of particleIterator()) {
             // calculating C_i(p_1, ..., p_n)
+            // if (particle_i.y <= (testBox.boundingBox.min.y + SURFACE_OFFSET)) {
+            //     DEBUG_DELTA_W = true;
+            // }
             var p_i = 0; // (1) and (2)
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 if (particle_i == particle_j) {
