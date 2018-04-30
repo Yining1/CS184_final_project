@@ -37,7 +37,7 @@ REST_DENSITY = 0.1; // TODO -- make sure to test and change
 TIMESTEP = 0.1; // TODO -- change as needed
 PARTICLE_PER_SIDE = 9;
 MASS = 1;
-GRID_SIZE = 5;
+GRID_SIZE = 10;
 CONST_K = 0.1;
 CONST_N = 4;
 CONST_c = 0.01;
@@ -45,18 +45,7 @@ DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to th
 SURFACE_OFFSET = 0.001;
 CONST_FRICTION = 0.001;
 
-
-LEFT_X = -100;
-RIGHT_X = 100;
-DOWN_Y = -100;
-UP_Y = -100;
-FRONT_Z = -300;
-BACK_Z = -500;
-
-
-
-
-TENSILE_INSTABILITY = false; // pls check if this is used for anything first before you depend on this lmao
+TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
 VORTICITY_EFFECT = false;
 VISCOSITY_EFFECT = false;
 
@@ -116,11 +105,8 @@ var particleCount = PARTICLE_PER_SIDE,
         size: 10,
         color: 0xFFFFFF
     });
-
 /// now create the individual particles
-
 var spacer = 2;
-
 for(var p = 0; p < particleCount; p++) {
   for (var q = 0; q < particleCount; q++) {
     for (var r = 0; r < particleCount; r++) {
@@ -132,10 +118,8 @@ for(var p = 0; p < particleCount; p++) {
         particle = new THREE.Vector3(pX, pY, pZ);
       // create a velocity vector
       particle.velocity = new THREE.Vector3(0, 0, 0);       // z
-
       particle.mass = MASS;
       particle.external_force = new THREE.Vector3(0, -9.8, 0);
-
       // add it to the geometry
       particles.vertices.push(particle);
     }
@@ -184,6 +168,13 @@ cube.position.z = -400;
 scene.add(cube);
 testBox.computeBoundingBox();
 testBox.boundingBox.translate(cube.position);
+
+LEFT_X = testBox.boundingBox.min.x;
+RIGHT_X = testBox.boundingBox.max.x;
+DOWN_Y = testBox.boundingBox.min.y;
+UP_Y = testBox.boundingBox.max.y;
+FRONT_Z = testBox.boundingBox.max.z;
+BACK_Z = testBox.boundingBox.min.z;
 
 // FACE REFERENCES:
 // [0-1] = right face
@@ -456,6 +447,30 @@ function update() {
 
         // CLOTHSIM-STYLE COLLISION HANDLING
 
+        //// axis x
+        if (particle_i.newPosition.x <= testBox.boundingBox.min.x) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.clone()
+            tangent.x = LEFT_X;
+            tangent.x += SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i);
+
+            particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+        }
+
+        if (particle_i.newPosition.x >= testBox.boundingBox.max.x) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.clone()
+            tangent.x = RIGHT_X;
+            tangent.x -= SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i);
+
+            particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+        }
+
+        //// axis y
         if (particle_i.newPosition.y <= testBox.boundingBox.min.y) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
             tangent = particle_i.clone()
@@ -466,6 +481,43 @@ function update() {
 
             particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
         }
+
+        if (particle_i.newPosition.y >= testBox.boundingBox.max.y) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.clone()
+            tangent.y = UP_Y;
+            tangent.y -= SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i);
+
+            particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+        }
+
+        //// axis z
+        if (particle_i.newPosition.z <= testBox.boundingBox.min.z) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.clone()
+            tangent.z = BACK_Z;
+            tangent.z += SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i);
+
+            particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+        }
+
+        ////disabled to keep front side open to shoot into
+        // if (particle_i.newPosition.z >= testBox.boundingBox.max.z) {
+        //     // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+        //     tangent = particle_i.clone()
+        //     tangent.z = FRONT_Z;
+        //     tangent.z -= SURFACE_OFFSET;
+        //
+        //     correction_vector = tangent.clone().sub(particle_i);
+        //
+        //     particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+        // }
+
+
 
 
 
