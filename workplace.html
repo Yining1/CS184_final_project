@@ -42,6 +42,9 @@ CONST_K = 0.1;
 CONST_N = 4;
 CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
+SURFACE_OFFSET = 0.001;
+CONST_FRICTION = 0.001;
+
 
 LEFT_X = -100;
 RIGHT_X = 100;
@@ -350,23 +353,23 @@ function update() {
 
             particle_i.delta = delta_p_i.multiplyScalar(1/REST_DENSITY);
 
-            // TODO - L14 - PERFORM COLLISION DETECTION AND RESPONSE
+            // TODO - L14 - PERFORM COLLISION DETECTION AND RESPONSE -- NOT REALLY
 
             // if (particle_i.newPosition.y <= testBox.boundingBox.min.y) {
             //     console.log("let's fight");
             // }
-            ray = new THREE.Ray(particle_i, particle_i.newPosition.clone().normalize());
-            qc = new THREE.Vector3();
-            ray.intersectBox(testBox.boundingBox, qc);
-
-            constraint_2 = particle_i.newPosition.clone().sub(qc).dot(BOTTOM_FACE.normal.clone().multiplyScalar(-1));
-            if (constraint_2 >= 0) {
-                // particle_i.delta.set(0, 0, 0);
-                // console.log("hahah");
-            } else {
-                newnew = (new THREE.Vector3(constraint_2, constraint_2, constraint_2)).multiplyScalar(-1 * particle_i.lambda * (1/particle_i.mass));
-                particle_i.delta.add(newnew);
-            }
+            // ray = new THREE.Ray(particle_i, particle_i.newPosition.clone().normalize());
+            // qc = new THREE.Vector3();
+            // ray.intersectBox(testBox.boundingBox, qc);
+            //
+            // constraint_2 = particle_i.newPosition.clone().sub(qc).dot(BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            // if (constraint_2 >= 0) {
+            //     // particle_i.delta.set(0, 0, 0);
+            //     // console.log("hahah");
+            // } else {
+            //     newnew = (new THREE.Vector3(constraint_2, constraint_2, constraint_2)).multiplyScalar(-1 * particle_i.lambda * (1/particle_i.mass));
+            //     particle_i.delta.add(newnew);
+            // }
 
 
         }
@@ -450,6 +453,21 @@ function update() {
         // if (particle_i.newPosition.z >= -300) {
         //     particle_i.newPosition.z = -300;
         // }
+
+        // CLOTHSIM-STYLE COLLISION HANDLING
+
+        if (particle_i.newPosition.y <= testBox.boundingBox.min.y) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.clone()
+            tangent.y = DOWN_Y;
+            tangent.y += SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i);
+
+            particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+        }
+
+
 
         particle_i.x = particle_i.newPosition.x;
         particle_i.y = particle_i.newPosition.y;
