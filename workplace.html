@@ -32,8 +32,8 @@ window.requestAnimFrame = (function(){
 // CONSTANT
 solverIteration = 4;
 CONST_H = 0.2; // TODO - make sure to test and change
-EPSILON = 0.1; // TODO -- make sure to test and change
-REST_DENSITY = 0.1; // TODO -- make sure to test and change
+EPSILON = 600; // TODO -- make sure to test and change
+REST_DENSITY = 6378; // TODO -- make sure to test and change
 TIMESTEP = 0.01; // TODO -- change as needed
 PARTICLE_PER_SIDE = 6;
 MASS = 1;
@@ -43,16 +43,16 @@ CONST_N = 4;
 CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
 SURFACE_OFFSET = 0.001;
-CONST_FRICTION = 0.0;
+CONST_FRICTION = 0.1;
 DEBUG = true;
 CENTER_BOX = -400;
-BOX_SIDE_LENGTH = 20;
+BOX_SIDE_LENGTH = 3;
 DEBUG_W = false;
 DEBUG_DELTA_W = false;
 PARTICLE_SPACING = 0.5;
 PARTICLE_DISPLACING = 0.01;
 
-TENSILE_INSTABILITY = false; // pls check if this is used for anything first before you depend on this lmao
+TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
 VORTICITY_EFFECT = false;
 VISCOSITY_EFFECT = false;
 
@@ -84,8 +84,8 @@ const camera =
 const scene = new THREE.Scene();
 
 if (DEBUG) {
-    camera.translateY(-5);
-    camera.translateZ(-355);
+    camera.translateY(0);
+    camera.translateZ(-390);
     camera.zoom = 2;
 }
 
@@ -132,7 +132,7 @@ for(var p = 0; p < particleCount; p++) {
       // create a velocity vector
       particle.velocity = new THREE.Vector3(0, 0, 0);       // z
       particle.mass = MASS;
-      particle.external_force = new THREE.Vector3(0, -9.8, 0);
+      particle.external_force = new THREE.Vector3(0, 0, 0);
       // add it to the geometry
       particles.vertices.push(particle);
     }
@@ -254,11 +254,11 @@ function deltaW(r, h) {
 
 console.log("friendly reminder that you're using testbox as boundaries for spatial map."); // TODO -- as written
 
-// function force_external(x) {
-//     var result = new THREE.Vector3(0, -9.8, 0);
-//     result.add(x.external_force);
-//     return result;
-// }
+function force_external(x) {
+    var result = new THREE.Vector3(0, -9.8, 0);
+    result.add(x.external_force);
+    return result;
+}
 
 updateCt = 0;
 // animation loop
@@ -279,7 +279,7 @@ function update() {
         // console.log("ef", particle.external_force);
         // console.log("fe", force_external(particle));
 
-        particle.velocity.add(particle.external_force.clone().multiplyScalar(TIMESTEP));
+        particle.velocity.add(force_external(particle).clone().multiplyScalar(TIMESTEP));
         particle.newPosition = particle.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
         // console.log(particle);
     }
@@ -478,6 +478,7 @@ function update() {
             correction_vector = tangent.clone().sub(particle_i);
 
             particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.x = 0;
         }
 
         if (particle_i.newPosition.x >= testBox.boundingBox.max.x) {
@@ -489,6 +490,7 @@ function update() {
             correction_vector = tangent.clone().sub(particle_i);
 
             particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.x = 0;
         }
 
         //// axis y
@@ -501,6 +503,7 @@ function update() {
             correction_vector = tangent.clone().sub(particle_i);
 
             particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.y = 0;
         }
 
         if (particle_i.newPosition.y >= testBox.boundingBox.max.y) {
@@ -512,6 +515,7 @@ function update() {
             correction_vector = tangent.clone().sub(particle_i);
 
             particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.y = 0;
         }
 
         //// axis z
@@ -524,19 +528,21 @@ function update() {
             correction_vector = tangent.clone().sub(particle_i);
 
             particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.z = 0;
         }
 
         ////disabled to keep front side open to shoot into
-        // if (particle_i.newPosition.z >= testBox.boundingBox.max.z) {
-        //     // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
-        //     tangent = particle_i.clone()
-        //     tangent.z = FRONT_Z;
-        //     tangent.z -= SURFACE_OFFSET;
-        //
-        //     correction_vector = tangent.clone().sub(particle_i);
-        //
-        //     particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
-        // }
+        if (particle_i.newPosition.z >= testBox.boundingBox.max.z) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.clone()
+            tangent.z = FRONT_Z;
+            tangent.z -= SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i);
+
+            particle_i.newPosition = particle_i.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.z = 0;
+        }
 
 
         particle_i.x = particle_i.newPosition.x;
