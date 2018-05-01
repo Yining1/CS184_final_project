@@ -31,7 +31,7 @@ window.requestAnimFrame = (function(){
 
 // CONSTANT
 solverIteration = 4;
-CONST_H = 0.2; // TODO - make sure to test and change
+CONST_H = 0.3; // TODO - make sure to test and change
 EPSILON = 600; // TODO -- make sure to test and change
 REST_DENSITY = 6378; // TODO -- make sure to test and change
 TIMESTEP = 0.01; // TODO -- change as needed
@@ -43,10 +43,10 @@ CONST_N = 4;
 CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
 SURFACE_OFFSET = 0.001;
-CONST_FRICTION = 0.1;
+CONST_FRICTION = 0.5;
 DEBUG = true;
 CENTER_BOX = -400;
-BOX_SIDE_LENGTH = 4;
+BOX_SIDE_LENGTH = 2;
 DEBUG_W = false;
 DEBUG_DELTA_W = false;
 PARTICLE_SPACING = 0.5;
