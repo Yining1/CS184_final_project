@@ -135,6 +135,7 @@ for(var p = 0; p < particleCount; p++) {
       particle.position.x = pX;
       particle.position.y = pY;
       particle.position.z = pZ;
+      particle.oldPosition = new THREE.Vector3(pX, pY, pZ);
       particle.velocity = new THREE.Vector3(0, 0, 0);       // z
       particle.mass = MASS;
       particle.external_force = new THREE.Vector3(0, 0, 0);
@@ -266,7 +267,13 @@ function force_external(x) {
     return result;
 }
 
-updateCt = 0;
+calcd = 0;
+updateCt = -1;
+MAXprecalcCt = 300;
+PREANIM = true;
+CALCULATING_BOOL = false;
+data_storage = new Map();
+DONE = false;
 // animation loop
 function update() {
 
@@ -279,6 +286,35 @@ function update() {
 
     updateCt += 1;
 
+    if (PREANIM) {
+        if (updateCt == 0) {
+            CALCULATING_BOOL = true;
+        }
+        if (updateCt == MAXprecalcCt) {
+            if (DONE) {
+                return;
+            }
+            updateCt = 0;
+            CALCULATING_BOOL = false;
+            DONE = true;
+        }
+        if (!CALCULATING_BOOL) {
+            curr_data_map = data_storage.get(updateCt);
+            for (let particle of particleIterator()) {
+                particle.position.copy(curr_data_map.get(particle.uuid));
+            }
+
+            renderer.render(scene, camera);
+
+            requestAnimFrame(update);
+            return;
+        }
+    }
+
+    if (updateCt % 20 == 0) {
+            console.log("updateCt", updateCt, "CALCULATING_BOOL", CALCULATING_BOOL);
+    }
+
     // L1-4
     for (let particle of particleIterator()) {
         // console.log(particle);
@@ -286,7 +322,7 @@ function update() {
         // console.log("fe", force_external(particle));
 
         particle.velocity.add(force_external(particle).clone().multiplyScalar(TIMESTEP));
-        particle.newPosition = particle.position.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
+        particle.newPosition = particle.oldPosition.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
         // console.log(particle);
     }
 
@@ -307,7 +343,7 @@ function update() {
                     continue;
                 }
                 // console.log("la", particle_j);
-                var y = W(particle_j.position.clone().sub(particle_i.position), CONST_H);
+                var y = W(particle_j.oldPosition.clone().sub(particle_i.oldPosition), CONST_H);
                 // if (y.x != 0 || y.z != 0) {
                 //     console.log("y", y);
                 // }
@@ -327,7 +363,7 @@ function update() {
                         if (particle_i == particle_j) {
                             continue;
                         }
-                        var temp_ij1 = particle_i.position.clone().sub(particle_j.position);
+                        var temp_ij1 = particle_i.oldPosition.clone().sub(particle_j.oldPosition);
                         var x = deltaW(temp_ij1, CONST_H);
                         // if ((updateCt >= 45) && (temp_ij1.x != 0 || temp_ij1.z != 0)) {
                         //     console.log("temp_ij1", temp_ij1);
@@ -335,7 +371,7 @@ function update() {
                         multiplier.add(x);
                     }
                 } else { // then it's a neighbor of particle_i
-                    var x = deltaW(particle_i.position.clone().sub(particle_k), CONST_H);
+                    var x = deltaW(particle_i.oldPosition.clone().sub(particle_k), CONST_H);
                     // if (x.x != 0 || x.z != 0) {
                     //     console.log("x", x)
                     // }
@@ -358,8 +394,8 @@ function update() {
                 if (particle_i == particle_j) {
                     continue;
                 }
-                particle_ij_sub = particle_i.position.clone().sub(particle_j.position);
-                delta_q = particle_i.position.clone().add(DELTA_Q_ADD);
+                particle_ij_sub = particle_i.oldPosition.clone().sub(particle_j.oldPosition);
+                delta_q = particle_i.oldPosition.clone().add(DELTA_Q_ADD);
                 if (TENSILE_INSTABILITY) {
                     s_corr = Math.pow(-CONST_K * (W(particle_ij_sub, CONST_H) / W(DELTA_Q_ADD, CONST_H)), CONST_N);
                     // TODO -- confirm if delta_q should be delta_q_add or delta_q
@@ -403,9 +439,14 @@ function update() {
     var big_N;
     var f_vorticity;
 
+    if (PREANIM) {
+        curr_data_map = new Map();
+        data_storage.set(updateCt, curr_data_map);
+    }
+
     for (let particle_i of particleIterator()) {
         // UPDATE VELOCITY -- L21
-        particle_i.velocity = particle_i.newPosition.clone().sub(particle_i.position).multiplyScalar(1 / TIMESTEP);
+        particle_i.velocity = particle_i.newPosition.clone().sub(particle_i.oldPosition).multiplyScalar(1 / TIMESTEP);
 
         // TODO -- L22 - APPLY VORTIICITY CONFINEMENT AND XSPH VISCOSCITY
 
@@ -477,83 +518,91 @@ function update() {
         //// axis x
         if (particle_i.newPosition.x <= testBox.boundingBox.min.x) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
-            tangent = particle_i.position.clone();
+            tangent = particle_i.oldPosition.clone();
             tangent.x = LEFT_X;
             tangent.x += SURFACE_OFFSET;
 
-            correction_vector = tangent.clone().sub(particle_i.position);
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
 
-            particle_i.newPosition = particle_i.position.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.x = 0;
         }
 
         if (particle_i.newPosition.x >= testBox.boundingBox.max.x) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
-            tangent = particle_i.position.clone();
+            tangent = particle_i.oldPosition.clone();
             tangent.x = RIGHT_X;
             tangent.x -= SURFACE_OFFSET;
 
-            correction_vector = tangent.clone().sub(particle_i.position);
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
 
-            particle_i.newPosition = particle_i.position.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.x = 0;
         }
 
         //// axis y
         if (particle_i.newPosition.y <= testBox.boundingBox.min.y) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
-            tangent = particle_i.position.clone();
+            tangent = particle_i.oldPosition.clone();
             tangent.y = DOWN_Y;
             tangent.y += SURFACE_OFFSET;
 
-            correction_vector = tangent.clone().sub(particle_i.position);
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
 
-            particle_i.newPosition = particle_i.position.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.y = 0;
         }
 
         if (particle_i.newPosition.y >= testBox.boundingBox.max.y) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
-            tangent = particle_i.position.clone();
+            tangent = particle_i.oldPosition.clone();
             tangent.y = UP_Y;
             tangent.y -= SURFACE_OFFSET;
 
-            correction_vector = tangent.clone().sub(particle_i.position);
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
 
-            particle_i.newPosition = particle_i.position.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.y = 0;
         }
 
         //// axis z
         if (particle_i.newPosition.z <= testBox.boundingBox.min.z) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
-            tangent = particle_i.position.clone();
+            tangent = particle_i.oldPosition.clone();
             tangent.z = BACK_Z;
             tangent.z += SURFACE_OFFSET;
 
-            correction_vector = tangent.clone().sub(particle_i.position);
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
 
-            particle_i.newPosition = particle_i.position.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.z = 0;
         }
 
         ////disabled to keep front side open to shoot into
         if (particle_i.newPosition.z >= testBox.boundingBox.max.z) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
-            tangent = particle_i.position.clone();
+            tangent = particle_i.oldPosition.clone();
             tangent.z = FRONT_Z;
             tangent.z -= SURFACE_OFFSET;
 
-            correction_vector = tangent.clone().sub(particle_i.position);
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
 
-            particle_i.newPosition = particle_i.position.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.z = 0;
         }
 
+        particle_i.oldPosition.x = particle_i.newPosition.x;
+        particle_i.oldPosition.y = particle_i.newPosition.y;
+        particle_i.oldPosition.z = particle_i.newPosition.z;
 
-        particle_i.position.x = particle_i.newPosition.x;
-        particle_i.position.y = particle_i.newPosition.y;
-        particle_i.position.z = particle_i.newPosition.z;
+        if (PREANIM) {
+            curr_data_map.set(particle_i.uuid, particle_i.newPosition.clone());
+        } else {
+            particle_i.position.x = particle_i.newPosition.x;
+            particle_i.position.y = particle_i.newPosition.y;
+            particle_i.position.z = particle_i.newPosition.z;
+
+        }
         // particle_i.geometry.verticesNeedUpdate = true;
     }
 
@@ -562,11 +611,13 @@ function update() {
     // dirty little secret.
     // particleSystem.geometry.__dirtyVertices = true;
     // particleSystem.geometry.verticesNeedUpdate = true;
-
-    renderer.render(scene, camera);
+    if (!PREANIM & !CALCULATING_BOOL) {
+            renderer.render(scene, camera);
+    }
 
     // set up the next call
     requestAnimFrame(update);
+
 }
 requestAnimFrame(update);
 
