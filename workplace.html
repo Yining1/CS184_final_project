@@ -31,7 +31,7 @@ window.requestAnimFrame = (function(){
 
 // CONSTANT
 solverIteration = 4;
-CONST_H = 0.2; // TODO - make sure to test and change
+CONST_H = 0.3; // TODO - make sure to test and change
 EPSILON = 600; // TODO -- make sure to test and change
 REST_DENSITY = 6378; // TODO -- make sure to test and change
 TIMESTEP = 0.01; // TODO -- change as needed
@@ -418,7 +418,7 @@ function update() {
             omega_i = new THREE.Vector3();
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
-                v_ij.multiply(deltaW(particle_j.clone().sub(particle_i), CONST_H));
+                v_ij.multiply(deltaW(particle_j.position.clone().sub(particle_i), CONST_H));
                 omega_i.add(v_ij);
             }
 
@@ -445,7 +445,7 @@ function update() {
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 // console.log(particle_j);
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
-                v_new_sum.add(v_ij.multiplyScalar(W(particle_j.clone().sub(particle_i), CONST_H)));
+                v_new_sum.add(v_ij.multiplyScalar(W(particle_j.position.clone().sub(particle_i), CONST_H)));
             }
 
             particle_i.velocity.add(v_new_sum.multiplyScalar(CONST_c));
