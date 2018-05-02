@@ -288,12 +288,11 @@ function update() {
 
     if (PREANIM) {
         if (updateCt == 0) {
-            CALCULATING_BOOL = true;
+            if (!DONE) {
+                CALCULATING_BOOL = true;
+            }
         }
         if (updateCt == MAXprecalcCt) {
-            if (DONE) {
-                return;
-            }
             updateCt = 0;
             CALCULATING_BOOL = false;
             DONE = true;
