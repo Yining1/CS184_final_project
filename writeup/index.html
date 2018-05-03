@@ -1,0 +1,291 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/latest.js?config=TeX-MML-AM_CHTML' async></script>
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2018</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Anna Brewer, CS184-ahm</h2>
+
+<br><br>
+
+<h2 align="middle">Technical Approach</h2>
+<p> We referenced <a href="http://mmacklin.com/pbf_sig_preprint.pdf">this</a> paper when implementing our fluid simulation. It modfies the SPH (Smoothed Particle Hydrodynamics) method for particle-based fluid simulation, using the unconditionally stable PBD (Position Based Dynamics) framework to facilitate real-time applications. It also modifies PBD by replacing Gauss-Seidel iteration with Jacobi iteration. In this method, we have one constraint equation for each particle, based on the positions of all other particles. We have a set of initial positions of the particles, and in each time step we iteratively update each particle's position individually by plugging the positions of the rest of the particles from the last time step into its constraint equation. Here we provide a simplified overview of the method outlined in the paper. </p>
+<p>
+We get the constraints using the ratio between the SPH density estimator \(p_i\) and the rest density \(p_0\). We want the density of the fluid to stay close to the rest density, so the particles should move in a way that brings this ratio closer to 1. Each particle's constraint (which is a function of the position of all the other particles) is the difference between the current ratio and the ideal ratio of 1:
+$$ \frac{p_i}{p_0} - C_i(p_1...p_n) = 1 $$</p>
+
+<p>The SPH density estimator \(p_i\) is defined as follows: 
+$$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
+<p>\(W\) represents the weight function, which defines how much the effect of each particle \(p_j\) on the current particle \(p_i\) decreases as a function of their distance \(p_i - p_j\) . In this case, we are using the Poly6 kernel, which looks similar to a Gaussian distribution. </p>
+
+<p>We're looking for a particle position correction \(\Delta p\) such that \(C(p + \Delta p) = 0\), meaning the particle has moved such that \(\frac{p_i}{p_0} = 1\). </p>
+
+<p>We know that \(\Delta p = \nabla C(p)\lambda\), where \(\Delta C\) is the gradient of \(C\) (roughly, the vector direction the particle should be moving in) and \(\lambda\) is a scaling factor. Using a series of Newton steps along the gradient, we have 
+    $$ (C(p + \Delta p)) \approx C(p) + \nabla C^T \nabla C \lambda $$
+</p>
+<p> We 
+
+
+<div class = "padded">
+<h2 align="middle">Part I: Masses and springs</h2>
+    <p>In this section, I constructed the cloth model using point masses and spring constraints. I used three types of constraints:
+    </p>
+    <p><strong>Structural:</strong> These constraints link each point to the point directly above it and the point directly to the left, forming a
+        grid. They form the basic structure of the cloth.
+    </p>
+    <p><strong>Shearing:</strong> These constraints link each point to the point to its upper right and the point to its upper left, forming a grid at a 45
+        degree angle. They prevent the cloth from shearing, i.e., becoming very parallelogram-shaped, with one corner far away from the corner diagonal to it.
+    </p>
+    <p><strong>Bending:</strong> These constraints link each point to the point two above it and the point to its left, forming a large grid along the same lines
+        as the one formed by the structural constraints. This type of constraint is weaker than the other two (in this project I set it to be one fifth of their
+        strength), and prevents the cloth from bending sharply and unnaturally.
+    </p>
+
+    <div align="center">
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="images/cloth_all.png" width="800px" />
+                    <figcaption>Cloth with all constraints.</figcaption>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/cloth_no_shear.png" width="800px" />
+                    <figcaption>Shearing constraints disabled.</figcaption>
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/cloth_shear.png" width="800px" />
+                    <figcaption>Shearing constraints only.</figcaption>
+            </tr>
+        </table>
+    </div>
+
+    <h2 align="middle">Part II: Simulation via numerical integration</h2>
+    <p>In this section, I implemented the main component of the cloth simulation: the physics equations which are integrated over to calculate the point masses' positions
+        at each time step. I first calculated the forces on the point masses due to gravity and the spring constraints. I then used Verlet integration to implement the logic for
+        updating the positions, based on the damping constant, the difference between each mass' current position and its previous position, and the aforementioned forces.
+        To prevent spring lengths from changing too dramatically, I constrained each spring to never stretch by longer than 10% of its rest length.
+        To test my work, I tried changing the different parameters and observed their effects on the motion and final resting state of the cloth:
+    </p>
+    <div align="center">
+    <p><strong>Ks:</strong> A higher spring constant corresponds to a stronger spring, and thus a stiffer cloth.</p>
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+                <img src="images/1000.png" width="800px" />
+                <figcaption>Ks = 1000 N/m.</figcaption>
+        </tr>
+        <tr>
+            <td align="middle">
+                <img src="images/normal.png" width="800px" />
+                <figcaption>Ks = 5000 N/m.</figcaption>
+        </tr>
+        <tr>
+            <td align="middle">
+                <img src="images/10000.png" width="800px" />
+                    <figcaption>Ks = 10000 N/m.</figcaption>
+        </tr>
+    </table>
+
+    <p><strong>Density:</strong> A higher density corresponds to a heavier looking fabric with more folds.
+    </p>
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+                <img src="images/5.png" width="800px" />
+                <figcaption>Density = 5 g/cm^2.</figcaption>
+        </tr>
+        <tr>
+            <td align="middle">
+                <img src="images/normal.png" width="800px" />
+                <figcaption>Density = 15 g/cm^2.</figcaption>
+        </tr>
+        <tr>
+            <td align="middle">
+                <img src="images/25.png" width="800px" />
+                <figcaption>Density = 25 g/cm^2.</figcaption>
+        </tr>
+    </table>
+    <p><strong>Damping:</strong> Higher damping corresponds to a slower animation and less freedom of motion between timesteps.
+    </p>
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+                <img src="images/10.png" width="800px" />
+                <figcaption>Damping = .10%. Lower damping increased rippling effects.</figcaption>
+        </tr>
+        <tr>
+            <td align="middle">
+                <img src="images/max.png" width="800px" />
+                <figcaption>Max damping. High damping made the cloth perfectly stiff and smooth.</figcaption>
+        </tr>
+        <tr>
+            <td align="middle">
+                <img src="images/25_ripples.png" width="800px" />
+                <figcaption>I observed an opposite phenomenon with density: heavy fabrics showed large ripples, while light fabrics showed almost none. Density = 25 g/cm^2 here.</figcaption>
+        </tr>
+    </table>
+    <p> </p>
+
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="images/canopy.png" width="800px" />
+                    <figcaption>Here's another pinned cloth, with default parameters.</figcaption>
+            </tr>
+        </table>
+
+    </div>
+
+    <h2 align="middle">Part III: Handling collisions with other objects</h2>
+    <p>In this section, I modified the cloth to support collisions with sphere and plane primitives. In both cases, I did this by calculating a "tangent point", a projection of
+        each point mass onto the shape (plane or sphere) and constraining that point mass to stay at that point when the algorithm attempts to set its position to somewhere inside
+        the sphere / beneath the plane.
+    </p>
+    <p>Here are some cloths with different spring constants draped over the sphere. As in the last section, it's clear that a higher ks corresponds to
+    a stiffer cloth which is better at supporting its own weight. The triangular patterns are not a calculation error, but an artifact of the low resolution of the
+        cloth mesh. Also pictured is the result of a plane intersection.</p>
+
+  <div align="center">
+
+    <table style="width=100%">
+        <tr>
+            <td align="middle">
+                <img src="images/sphere_500.png" width="400px" />
+                <figcaption>Ks = 500.</figcaption>
+            <td align="middle">
+                <img src="images/sphere_5000.png" width="400px" />
+                <figcaption>Ks = 5000.</figcaption>
+        </tr>
+        <tr>
+            <td align="middle">
+                <img src="images/sphere_50000.png" width="400px" />
+                <figcaption>Ks = 50000.</figcaption>
+            <td align="middle">
+                <img src="images/plane.png" width="400px" />
+                <figcaption>"Peaceful cloth" :)</figcaption>
+        </tr>
+    </table>
+</div>
+
+
+    <h2 align="middle">Part IV: Handling self-collisions</h2>
+    <p>In this section, I modified the cloth to support self-collisions. To do this, I discretized the 3D space into boxes of width and height equal to three
+        times the width and height, respectively, of one unit of cloth, and depth equal to the larger of the two. At each step, each point mass falls into one of the
+        boxes, and the algorithm checks for collisions (defined as distance closer than twice the thickness of the cloth) with other point masses within the box and
+        applies a repulsive force to colliding point masses. Pictured below is a combination of self collisions and plane collisions with different parameters.
+    </p>
+
+    <div align="center">
+        <p>Standard cloth, density = 15 g/cm^2 and ks = 5000 N/m:</p>
+        <p>This cloth unrolled very slowly to reach its final resting state, displaying a "bubbly" surface which is an artifact of discretizing the space.</p>
+
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="images/15_1.png" width="400px" />
+                <td align="middle">
+                    <img src="images/15_2.png" width="400px" />
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/15_3.png" width="400px" />
+                <td align="middle">
+                    <img src="images/15_4.png" width="400px" />
+            </tr>
+        </table>
+        <p>Low density cloth (5 g/cm^2):</p>
+        <p>This cloth ended up lying very flat and rectangular. It fell down slowly because of its low weight, but it reached its final state relatively quickly.</p>
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="images/5_1.png" width="400px" />
+                <td align="middle">
+                    <img src="images/5_2.png" width="400px" />
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/5_3.png" width="400px" />
+                <td align="middle">
+                    <img src="images/5_4.png" width="400px" />
+            </tr>
+        </table>
+        <p>High density cloth (25 g/cm^2):</p>
+        <p>This cloth fell down quickly and was initially piled very thick. It took quite a while to unroll into its final state, and the particles displayed a lot of "bubbly" motion, almost as if they were straining against each other.</p>
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="images/25_1.png" width="400px" />
+                <td align="middle">
+                    <img src="images/25_2.png" width="400px" />
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/25_3.png" width="400px" />
+                <td align="middle">
+                    <img src="images/25_4.png" width="400px" />
+            </tr>
+        </table>
+        <p>Low ks cloth (1000 N/m):</p>
+        <p>This cloth displayed more, smaller folds than the others. Because of its weak spring constraints, it initially looked crumpled but then unrolled into almost a completely flat plane. </p>
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="images/1000_1.png" width="400px" />
+                <td align="middle">
+                    <img src="images/1000_2.png" width="400px" />
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/1000_3.png" width="400px" />
+                <td align="middle">
+                    <img src="images/1000_4.png" width="400px" />
+            </tr>
+        </table>
+        <p>High ks cloth (10000 N/m):</p>
+        <p>This cloth was the stiffest and smoothest looking of the bunch. It displayed the largest folds and the greatest amount of bouncing motion when it fell. It reached its final shape quickly, but it took a while for the bubbling to settle down.</p>
+        <table style="width=100%">
+            <tr>
+                <td align="middle">
+                    <img src="images/10000_1.png" width="400px" />
+                <td align="middle">
+                    <img src="images/10000_2.png" width="400px" />
+            </tr>
+            <tr>
+                <td align="middle">
+                    <img src="images/10000_3.png" width="400px" />
+                <td align="middle">
+                    <img src="images/10000_4.png" width="400px" />
+            </tr>
+        </table>
+    </div>
+
+
+</div>
+
+
+</body>
+</html>
