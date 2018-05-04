@@ -9,9 +9,9 @@ function build_spatial_map(particles, pCount, box, gridDimension) {
 
     while(pCount--) {
         // get the particle
-        var particle = particles[pCount];
+        var particle = particles.vertices[pCount];
 
-        coord = __spatial_map_hash(particle.position.x - minPt.x, particle.position.y - minPt.y, particle.position.z - minPt.z, width, height, depth, gridDimension);
+        coord = __spatial_map_hash(particle.x - minPt.x, particle.y - minPt.y, particle.z - minPt.z, width, height, depth, gridDimension);
 
         if (map.has(coord)) {
                 map.get(coord).push(particle);
@@ -48,7 +48,7 @@ function __spatial_map_hash(x, y, z, width, height, depth, gridDimension) {
 
 function getCoordThisMap(particle, map) {
     // console.log(map);
-    return __spatial_map_hash(particle.position.x - map.minPt.x, particle.position.y - map.minPt.y, particle.position.z - map.minPt.z, map.width, map.height, map.depth, map.gridDimension);
+    return __spatial_map_hash(particle.x - map.minPt.x, particle.y - map.minPt.y, particle.z - map.minPt.z, map.width, map.height, map.depth, map.gridDimension);
 }
 
 function getNeighborsThisMap(particle, map) {

@@ -31,29 +31,28 @@ window.requestAnimFrame = (function(){
 
 // CONSTANT
 solverIteration = 4;
-CONST_H = 0.5; // TODO - make sure to test and change
-EPSILON = 0.1; // TODO -- make sure to test and change
-REST_DENSITY = 0.1; // TODO -- make sure to test and change
-TIMESTEP = 0.1; // TODO -- change as needed
-PARTICLE_PER_SIDE = 9;
+CONST_H = 0.3; // TODO - make sure to test and change
+EPSILON = 600; // TODO -- make sure to test and change
+REST_DENSITY = 6378; // TODO -- make sure to test and change
+TIMESTEP = 0.01; // TODO -- change as needed
+PARTICLE_PER_SIDE = 6;
 MASS = 1;
-GRID_SIZE = 5;
+GRID_SIZE = 10;
 CONST_K = 0.1;
 CONST_N = 4;
 CONST_c = 0.01;
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.1 * CONST_H); // TODO -- according to the paper, it should be a fixed point
+SURFACE_OFFSET = 0.001;
+CONST_FRICTION = 0.5;
+DEBUG = true;
+CENTER_BOX = -400;
+BOX_SIDE_LENGTH = 2;
+DEBUG_W = false;
+DEBUG_DELTA_W = false;
+PARTICLE_SPACING = 0.2;
+PARTICLE_DISPLACING = 0.01;
 
-LEFT_X = -100;
-RIGHT_X = 100;
-DOWN_Y = -100;
-UP_Y = -100;
-FRONT_Z = -300;
-BACK_Z = -500;
-
-
-
-
-TENSILE_INSTABILITY = false; // pls check if this is used for anything first before you depend on this lmao
+TENSILE_INSTABILITY = true; // pls check if this is used for anything first before you depend on this lmao
 VORTICITY_EFFECT = false;
 VISCOSITY_EFFECT = false;
 
@@ -84,6 +83,12 @@ const camera =
 
 const scene = new THREE.Scene();
 
+if (DEBUG) {
+    camera.translateY(0);
+    camera.translateZ(-390);
+    camera.zoom = 2;
+}
+
 // Add the camera to the scene.
 scene.add(camera);
 
@@ -108,33 +113,35 @@ container.appendChild(renderer.domElement);
 
 // create the particle variables
 var particleCount = PARTICLE_PER_SIDE,
-    particles = new THREE.Geometry(),
-    pMaterial = new THREE.PointsMaterial({
-        size: 10,
-        color: 0xFFFFFF
-    });
-
+    particles = new Array();
+    // pMaterial = new THREE.PointsMaterial({
+    //     size: 1,
+    //     color: 0xFFFFFF
+    // });
 /// now create the individual particles
-
-var spacer = 2;
-
+var sp_geometry = new THREE.SphereGeometry(0.1);
+var sp_material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+var spacer = PARTICLE_SPACING;
 for(var p = 0; p < particleCount; p++) {
   for (var q = 0; q < particleCount; q++) {
     for (var r = 0; r < particleCount; r++) {
       // create a particle with random
       // position values, -250 -> 250
-      var pX = (p - (particleCount / 2.0)) * spacer,
+      var pX = (p - (particleCount / 2.0)) * spacer + (Math.random() * PARTICLE_DISPLACING),
         pY = (q - (particleCount / 2.0)) * spacer,
-        pZ = (r - 200) * spacer,
-        particle = new THREE.Vector3(pX, pY, pZ);
+        pZ = (r - (particleCount / 2.0)) * spacer + (Math.random() * PARTICLE_DISPLACING) + CENTER_BOX,
+        particle = new THREE.Mesh(sp_geometry, sp_material);
       // create a velocity vector
+      particle.position.x = pX;
+      particle.position.y = pY;
+      particle.position.z = pZ;
+      particle.oldPosition = new THREE.Vector3(pX, pY, pZ);
       particle.velocity = new THREE.Vector3(0, 0, 0);       // z
-
       particle.mass = MASS;
-      particle.external_force = new THREE.Vector3(0, -9.8, 0);
-
+      particle.external_force = new THREE.Vector3(0, 0, 0);
       // add it to the geometry
-      particles.vertices.push(particle);
+      particles.push(particle);
+      scene.add(particle);
     }
   }
 }
@@ -162,25 +169,32 @@ console.log("particles:", particles);
 // }
 
 // create the particle system
-var particleSystem = new THREE.Points(
-    particles,
-    pMaterial);
+// var particleSystem = new THREE.Points(
+//     particles,
+//     pMaterial);
 
 // add it to the scene
-scene.add(particleSystem);
+// scene.add(particleSystem);
 
 // TESTING
 // console.log(spatial_map_hash(0.1, 0.2, 0.3, 1, 1, 1, 0.1)); => 1,2,3
 
-testBox = new THREE.BoxGeometry(200, 200, 200);
+testBox = new THREE.BoxGeometry(BOX_SIDE_LENGTH, BOX_SIDE_LENGTH, BOX_SIDE_LENGTH);
 // var geometry = new THREE.BoxGeometry(200, 200, 200);
 var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 material.wireframe = true;
 var cube = new THREE.Mesh(testBox, material);
-cube.position.z = -400;
+cube.position.z = CENTER_BOX;
 scene.add(cube);
 testBox.computeBoundingBox();
 testBox.boundingBox.translate(cube.position);
+
+LEFT_X = testBox.boundingBox.min.x;
+RIGHT_X = testBox.boundingBox.max.x;
+DOWN_Y = testBox.boundingBox.min.y;
+UP_Y = testBox.boundingBox.max.y;
+FRONT_Z = testBox.boundingBox.max.z;
+BACK_Z = testBox.boundingBox.min.z;
 
 // FACE REFERENCES:
 // [0-1] = right face
@@ -198,11 +212,11 @@ BACK_FACE = testBox.faces[8]
 FRONT_FACE = testBox.faces[10]
 
 function* particleIterator() {
-    var pCount = particles.vertices.length;
+    var pCount = particles.length;
     // console.log(particles);
     while(pCount--) {
         // get the particle
-        particle = particles.vertices[pCount];
+        particle = particles[pCount];
         yield particle;
     }
 }
@@ -218,6 +232,9 @@ function W(r, h) {
     }
     var res = (315 / (64 * Math.PI * Math.pow(h, 9))) * multiplier
     // console.log(res);
+    if (DEBUG_W) {
+        console.log(res);
+    }
     return res;
 }
 
@@ -231,10 +248,12 @@ function deltaW(r, h) {
         multiplier = new THREE.Vector3();
     }
     var res = multiplier.multiplyScalar(-1 * (45.0 / (Math.PI * Math.pow(h, 6))));
-    // if (res.length() > 0) {
-    //     console.log("r", r);
-    //     console.log("res", res);
-    // }
+    if (DEBUG_DELTA_W) {
+        console.log(res.x, res.y, res.z);
+        if (res.y > 0) {
+            console.log("what");
+        }
+    }
     return res;
 }
 
@@ -242,13 +261,19 @@ function deltaW(r, h) {
 
 console.log("friendly reminder that you're using testbox as boundaries for spatial map."); // TODO -- as written
 
-// function force_external(x) {
-//     var result = new THREE.Vector3(0, -9.8, 0);
-//     result.add(x.external_force);
-//     return result;
-// }
+function force_external(x) {
+    var result = new THREE.Vector3(0, -9.8, 0);
+    result.add(x.external_force);
+    return result;
+}
 
-updateCt = 0;
+calcd = 0;
+updateCt = -1;
+MAXprecalcCt = 300;
+PREANIM = true;
+CALCULATING_BOOL = false;
+data_storage = new Map();
+DONE = false;
 // animation loop
 function update() {
 
@@ -261,18 +286,46 @@ function update() {
 
     updateCt += 1;
 
+    if (PREANIM) {
+        if (updateCt == 0) {
+            if (!DONE) {
+                CALCULATING_BOOL = true;
+            }
+        }
+        if (updateCt == MAXprecalcCt) {
+            updateCt = 0;
+            CALCULATING_BOOL = false;
+            DONE = true;
+        }
+        if (!CALCULATING_BOOL) {
+            curr_data_map = data_storage.get(updateCt);
+            for (let particle of particleIterator()) {
+                particle.position.copy(curr_data_map.get(particle.uuid));
+            }
+
+            renderer.render(scene, camera);
+
+            requestAnimFrame(update);
+            return;
+        }
+    }
+
+    if (updateCt % 20 == 0) {
+            console.log("updateCt", updateCt, "CALCULATING_BOOL", CALCULATING_BOOL);
+    }
+
     // L1-4
     for (let particle of particleIterator()) {
         // console.log(particle);
         // console.log("ef", particle.external_force);
         // console.log("fe", force_external(particle));
 
-        particle.velocity.add(particle.external_force.clone().multiplyScalar(TIMESTEP));
-        particle.newPosition = particle.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
+        particle.velocity.add(force_external(particle).clone().multiplyScalar(TIMESTEP));
+        particle.newPosition = particle.oldPosition.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
         // console.log(particle);
     }
 
-    neighborsMap = build_spatial_map(particles, particles.vertices.length, testBox, GRID_SIZE);
+    neighborsMap = build_spatial_map(particles, particles.length, testBox, GRID_SIZE);
 
 
     // L8-19
@@ -280,13 +333,16 @@ function update() {
         // L9-11
         for (let particle_i of particleIterator()) {
             // calculating C_i(p_1, ..., p_n)
+            // if (particle_i.y <= (testBox.boundingBox.min.y + SURFACE_OFFSET)) {
+            //     DEBUG_DELTA_W = true;
+            // }
             var p_i = 0; // (1) and (2)
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 if (particle_i == particle_j) {
                     continue;
                 }
                 // console.log("la", particle_j);
-                var y = W(particle_j.clone().sub(particle_i), CONST_H);
+                var y = W(particle_j.oldPosition.clone().sub(particle_i.oldPosition), CONST_H);
                 // if (y.x != 0 || y.z != 0) {
                 //     console.log("y", y);
                 // }
@@ -306,7 +362,7 @@ function update() {
                         if (particle_i == particle_j) {
                             continue;
                         }
-                        var temp_ij1 = particle_i.clone().sub(particle_j);
+                        var temp_ij1 = particle_i.oldPosition.clone().sub(particle_j.oldPosition);
                         var x = deltaW(temp_ij1, CONST_H);
                         // if ((updateCt >= 45) && (temp_ij1.x != 0 || temp_ij1.z != 0)) {
                         //     console.log("temp_ij1", temp_ij1);
@@ -314,7 +370,7 @@ function update() {
                         multiplier.add(x);
                     }
                 } else { // then it's a neighbor of particle_i
-                    var x = deltaW(particle_i.clone().sub(particle_k), CONST_H);
+                    var x = deltaW(particle_i.oldPosition.clone().sub(particle_k), CONST_H);
                     // if (x.x != 0 || x.z != 0) {
                     //     console.log("x", x)
                     // }
@@ -337,8 +393,8 @@ function update() {
                 if (particle_i == particle_j) {
                     continue;
                 }
-                particle_ij_sub = particle_i.clone().sub(particle_j);
-                delta_q = particle_i.clone().add(DELTA_Q_ADD);
+                particle_ij_sub = particle_i.oldPosition.clone().sub(particle_j.oldPosition);
+                delta_q = particle_i.oldPosition.clone().add(DELTA_Q_ADD);
                 if (TENSILE_INSTABILITY) {
                     s_corr = Math.pow(-CONST_K * (W(particle_ij_sub, CONST_H) / W(DELTA_Q_ADD, CONST_H)), CONST_N);
                     // TODO -- confirm if delta_q should be delta_q_add or delta_q
@@ -350,23 +406,23 @@ function update() {
 
             particle_i.delta = delta_p_i.multiplyScalar(1/REST_DENSITY);
 
-            // TODO - L14 - PERFORM COLLISION DETECTION AND RESPONSE
+            // TODO - L14 - PERFORM COLLISION DETECTION AND RESPONSE -- NOT REALLY
 
             // if (particle_i.newPosition.y <= testBox.boundingBox.min.y) {
             //     console.log("let's fight");
             // }
-            ray = new THREE.Ray(particle_i, particle_i.newPosition.clone().normalize());
-            qc = new THREE.Vector3();
-            ray.intersectBox(testBox.boundingBox, qc);
-
-            constraint_2 = particle_i.newPosition.clone().sub(qc).dot(BOTTOM_FACE.normal.clone().multiplyScalar(-1));
-            if (constraint_2 >= 0) {
-                // particle_i.delta.set(0, 0, 0);
-                // console.log("hahah");
-            } else {
-                newnew = (new THREE.Vector3(constraint_2, constraint_2, constraint_2)).multiplyScalar(-1 * particle_i.lambda * (1/particle_i.mass));
-                particle_i.delta.add(newnew);
-            }
+            // ray = new THREE.Ray(particle_i, particle_i.newPosition.clone().normalize());
+            // qc = new THREE.Vector3();
+            // ray.intersectBox(testBox.boundingBox, qc);
+            //
+            // constraint_2 = particle_i.newPosition.clone().sub(qc).dot(BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            // if (constraint_2 >= 0) {
+            //     // particle_i.delta.set(0, 0, 0);
+            //     // console.log("hahah");
+            // } else {
+            //     newnew = (new THREE.Vector3(constraint_2, constraint_2, constraint_2)).multiplyScalar(-1 * particle_i.lambda * (1/particle_i.mass));
+            //     particle_i.delta.add(newnew);
+            // }
 
 
         }
@@ -382,9 +438,14 @@ function update() {
     var big_N;
     var f_vorticity;
 
+    if (PREANIM) {
+        curr_data_map = new Map();
+        data_storage.set(updateCt, curr_data_map);
+    }
+
     for (let particle_i of particleIterator()) {
         // UPDATE VELOCITY -- L21
-        particle_i.velocity = particle_i.newPosition.clone().sub(particle_i).multiplyScalar(1 / TIMESTEP);
+        particle_i.velocity = particle_i.newPosition.clone().sub(particle_i.oldPosition).multiplyScalar(1 / TIMESTEP);
 
         // TODO -- L22 - APPLY VORTIICITY CONFINEMENT AND XSPH VISCOSCITY
 
@@ -397,7 +458,7 @@ function update() {
             omega_i = new THREE.Vector3();
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
-                v_ij.multiply(deltaW(particle_j.clone().sub(particle_i), CONST_H));
+                v_ij.multiply(deltaW(particle_j.position.clone().sub(particle_i), CONST_H));
                 omega_i.add(v_ij);
             }
 
@@ -424,7 +485,7 @@ function update() {
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 // console.log(particle_j);
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
-                v_new_sum.add(v_ij.multiplyScalar(W(particle_j.clone().sub(particle_i), CONST_H)));
+                v_new_sum.add(v_ij.multiplyScalar(W(particle_j.position.clone().sub(particle_i), CONST_H)));
             }
 
             particle_i.velocity.add(v_new_sum.multiplyScalar(CONST_c));
@@ -451,21 +512,111 @@ function update() {
         //     particle_i.newPosition.z = -300;
         // }
 
-        particle_i.x = particle_i.newPosition.x;
-        particle_i.y = particle_i.newPosition.y;
-        particle_i.z = particle_i.newPosition.z;
+        // CLOTHSIM-STYLE COLLISION HANDLING
+
+        //// axis x
+        if (particle_i.newPosition.x <= testBox.boundingBox.min.x) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.oldPosition.clone();
+            tangent.x = LEFT_X;
+            tangent.x += SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.x = 0;
+        }
+
+        if (particle_i.newPosition.x >= testBox.boundingBox.max.x) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.oldPosition.clone();
+            tangent.x = RIGHT_X;
+            tangent.x -= SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.x = 0;
+        }
+
+        //// axis y
+        if (particle_i.newPosition.y <= testBox.boundingBox.min.y) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.oldPosition.clone();
+            tangent.y = DOWN_Y;
+            tangent.y += SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.y = 0;
+        }
+
+        if (particle_i.newPosition.y >= testBox.boundingBox.max.y) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.oldPosition.clone();
+            tangent.y = UP_Y;
+            tangent.y -= SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.y = 0;
+        }
+
+        //// axis z
+        if (particle_i.newPosition.z <= testBox.boundingBox.min.z) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.oldPosition.clone();
+            tangent.z = BACK_Z;
+            tangent.z += SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.z = 0;
+        }
+
+        ////disabled to keep front side open to shoot into
+        if (particle_i.newPosition.z >= testBox.boundingBox.max.z) {
+            // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
+            tangent = particle_i.oldPosition.clone();
+            tangent.z = FRONT_Z;
+            tangent.z -= SURFACE_OFFSET;
+
+            correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
+            particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
+            particle_i.velocity.z = 0;
+        }
+
+        particle_i.oldPosition.x = particle_i.newPosition.x;
+        particle_i.oldPosition.y = particle_i.newPosition.y;
+        particle_i.oldPosition.z = particle_i.newPosition.z;
+
+        if (PREANIM) {
+            curr_data_map.set(particle_i.uuid, particle_i.newPosition.clone());
+        } else {
+            particle_i.position.x = particle_i.newPosition.x;
+            particle_i.position.y = particle_i.newPosition.y;
+            particle_i.position.z = particle_i.newPosition.z;
+
+        }
+        // particle_i.geometry.verticesNeedUpdate = true;
     }
 
     // flag to the particle system that we've
     // changed its vertices. This is the
     // dirty little secret.
     // particleSystem.geometry.__dirtyVertices = true;
-    particleSystem.geometry.verticesNeedUpdate = true;
-
-    renderer.render(scene, camera);
+    // particleSystem.geometry.verticesNeedUpdate = true;
+    if (!PREANIM & !CALCULATING_BOOL) {
+            renderer.render(scene, camera);
+    }
 
     // set up the next call
     requestAnimFrame(update);
+
 }
 requestAnimFrame(update);
 
