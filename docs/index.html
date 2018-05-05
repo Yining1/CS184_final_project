@@ -31,7 +31,7 @@
 <!-- <br><br> -->
 
 <h2 align="middle">Abstract</h2>
-<p>In this project, we built a 3D fluid simulator based off of <a href='http://mmacklin.com/pbf_sig_preprint.pdf'> Position Based Fluids</a>, by Macklin and Muller. We ultimately created this project in conjunction with Three.js and WebGL to create a fluid simulation that can run in any browser, on any html-compatible device. This fluid sim incoporates different fluid properties such as incompressibility, tensile instability, viscosity, and vorticity. </p>
+<p>In this project, we built a 3D fluid simulator based off of <a href='http://mmacklin.com/pbf_sig_preprint.pdf'> Position Based Fluids</a>, by Macklin and Muller. We ultimately created this project in conjunction with Three.js and WebGL to create a fluid simulation that can run in any browser, on any html-running device. This fluid sim incoporates different fluid properties such as incompressibility, tensile instability, viscosity, and vorticity. </p>
 
 <h2 align="middle">Technical Approach</h2>
 <p> We referenced <a href="http://mmacklin.com/pbf_sig_preprint.pdf">this</a> paper when implementing our fluid simulation. It modfies the SPH (Smoothed Particle Hydrodynamics) method for particle-based fluid simulation, using the unconditionally stable PBD (Position Based Dynamics) framework to facilitate real-time applications. It also modifies PBD by replacing Gauss-Seidel iteration with Jacobi iteration. In this method, we have one constraint equation for each particle, based on the positions of all other particles. We have a set of initial positions of the particles, and in each time step we iteratively update each particle's position individually by plugging the positions of the rest of the particles from the last time step into its constraint equation. Here we provide a simplified overview of the method outlined in the paper. </p>
@@ -64,6 +64,51 @@ $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
     \end{align*}
     $$
 </p>
+<p>And \(\nabla C_i^T \nabla C_i\) is simply the length of the vector \(C_i\). We now have an equation for \(\lambda_i\), the scaling factor for particle \(p_i\): </p>
+    $$
+    \lambda_i =  - \frac{C_i(p_1...p_n)}{\sum_k |\nabla_{p_k}C_i|^2}
+    $$
+</p>
+<p>
+    To reduce instability, we add a small relaxation parameter \(\epsilon\) to the denominator of this equation, giving us:
+    $$
+    \lambda_i =  - \frac{C_i(p_1...p_n)}{\sum_k |\nabla_{p_k}C_i|^2 + \epsilon}
+    $$
+</p>
+<p>Putting it all together, we can now calculate \(\Delta p_i\) for each particle using Jacobi iteration.</p>
+    $$
+    \Delta p_i = \frac{1}{\rho_0}\sum_j(\lambda_i + \lambda_j)\nabla W(p_i - p_j, h)
+    $$
+</p>
+<p>Tensile instability in the simulation leads to clumping of the particles. In order to reduce this effect, we introduce an artificial repulsive pressure term between all particles. This is done by subtracting off a small vector in the direction of the particle's motion, \(s_{corr}\), which is defined using the Poly6 smoothing kernel itself:
+    $$
+    s_{corr} = -k\bigg(\frac{W(p_i - p_j, h)}{W(\Delta q, h)}\bigg)^n
+    $$
+
+    Here, \(\Delta q \) is a number between 0 and \(h\), which is used to sample \(W\), and \(k\) is a small positive constant. We add \(s_{corr}\) to our scaling factors in our main equation, giving us:
+    $$
+
+    \Delta p_i = \frac{1}{\rho_0}\sum_j(\lambda_i + \lambda_j + s_{corr})\nabla W(p_i - p_j, h)
+
+    $$
+
+    Here is the equation for the Poly6 kernel, which is used to weight the particles according to distance:
+
+    $$
+    W_{poly_6}(r, h) = \frac{315}{64\pi h^9}(h^2 - |r|^2)^3
+    $$
+
+    And here is the equation for the Spiky kernel, which is used to calculate the gradient of \(W\):
+    $$
+    \nabla W_{spiky}(r, h) = \frac{45}{\pi h^6}(h - |r|)^2 \frac{r}{|r|}
+    $$
+
+    Note that because these kernels have high values, the rest density of the fluid is much higher than the number of simulation particles per unit (this was a bug we had, which caused our cube of fluid particles to explode!) We found that a rest density of approximately 6,000 worked well.
+</p>
+
+<p>
+    Finally, at each time step, we start by calculating the approximate position of each particle based on its current position and velocity. We then proceed to solve the constraint equation for each particle using the method outlined above, based on all the particles' newly calculated approximate positions (it's important not to use the old positions here - this was another big bug we had!) After calculating this for every particle, we update their positions, and also update their velocities based on their old positions and their new constrained positions. We repeat this process four times per frame. A higher number of solver iterations allows the simulation to converge more, but also slows down the code. </p>
+
 
 <!-- <div align="middle">
   <table>
@@ -82,11 +127,12 @@ $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
 <p>At first, we wanted to create a simulation using a library from a paper that we had read,  but it had only been tested on Windows and Ubuntu, and all three of us were using Macs. We tried to make it work for a while longer than we should have, and ultimately found that it may be more work than it would be worth. 
 </p>
 
-<p>From there, we pivoted our project to create a water simulation through webGL, in the hopes of also connecting on Leap Motion and Google Cardboard to make a water bending simulation. However, we found that Cardboard and Leap Motion could not work together, and had to leave in just the Leap Motion portion of our project. </p>
+<p>From there, we pivoted our project to create a water simulation through webGL, in the hopes of also connecting on Leap Motion and Google Cardboard to make a water bending simulation. However, we found that Cardboard and Leap Motion could not work together, and had to leave in just the Leap Motion portion of our project.</p>
 
 <p>For a portion of the project, we were very unsure if the reason for our simulation not acting like water due to errors in code, or in our parameters. After a bit of fiddling around, we tried to do a bit more research ourselves, and found a project from Stanford online, which was also based off the same Position Based Dynamics paper, and had parameters that were suggested by the author of the paper. This taught us to not only trust the internet a more in the debugging process by not always assuming that the problem has to do with our code, but also that we could potentially reach out to the authors of the papers for advice. </p>
 
 <p>Another problem that we found was that our simulation would run incredibly slow, since it's running in a browser, but we overcame this by creating a caching system that calculates all of the position based dynamics beforehand, and then presents the simulation after. This not only made it easier for us to work on other aspects of the code while it was loading, but also it gave us a better idea of where our simulation was failing, since we could load simulations with more particles and still watch them at a regular rate.</p>
+
 
 
 
@@ -100,7 +146,7 @@ $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
 
 <h2 align="middle">Results</h2>
 <h3 align="middle">Final Result:</h3>
-<p>Here's the result, make sure to <b>wait for about half a minute for all the calculations to run: </b> <a href="workplace.html" target="_blank">this</a></p> 
+<p>This is pretty exciting, because anyone could open this code on their browser! Here's the result, make sure to <b>wait for about a minute for all the calculations to run: </b> <a href="workplace.html" target="_blank">this</a></p> 
 
 <h2 align="middle">References</h2>
 <p>Papers:</p>
@@ -118,7 +164,7 @@ $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
   <li><a target="_blank" href='https://aerotwist.com/tutorials/creating-particles-with-three-js/'> Three.js particle starter tutorial</a></li>
 </ul>
 
-<p>Optimizing and Parameters</p>
+<p>Optimizing and Parameters:</p>
 <ul>
 <li><a target="_blank" href='https://link.springer.com/content/pdf/10.1007/978-3-642-14533-9_61.pdf'> Collision Detection Optimization </a></li>
   <li><a target="_blank" href='http://graphics.stanford.edu/courses/cs348c/PA1_PBF2016/index.html'> Suggested parameters from similar Stanford project</a></li>
