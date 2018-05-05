@@ -18,13 +18,16 @@
 <!-- <script src="spatialhash.js/dist/spatialhash.js"></script> -->
 <script type="x-shader/x-vertex" id="vertshader">
     varying vec2 vUv;
+
       // #include <color_vertex>
       varying vec3 vColor;
       uniform float u_time;
+
       //varying float time;
       //attribute float size;
     //   #ifdef GL_ES
     // precision highp float;
+
     // #endif
       void main() {
         vUv = uv;
@@ -36,26 +39,36 @@
   </script>
 
   <script type="x-shader/x-fragment" id="fragshader">
+
         uniform sampler2D texture;
         varying vec2 vUv;
+
         precision highp float;
         uniform float u_time;
         varying vec3 vColor;
+
+
     //   #ifdef GL_ES
     // precision highp float;
     // #endif
       void main() {
+
         //gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0 );
         //gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+
+
         vec4 samplerColor = texture2D(texture, vUv);
+
         // float pi = 3.141592653589793;
         // float t = u_time / 1000.0;
         // float r = (sin(t) * 0.25 + 0.5);
         // float g = (sin(t + 2.0*pi/3.0) * 0.25 + 0.5);
         // float b = (sin(t + 4.0*pi/3.0) * 0.25 + 0.5);
+
         //float red = rand();
         // float grn = rand();
         // float blu = rand();
+
         //gl_FragColor = vec4(red, grn, blu, 1.0) * samplerColor;
         //gl_FragColor = vec4(r, g, b, 1.0) * samplerColor;
         gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0 ) * samplerColor;
@@ -65,13 +78,16 @@
   </script>
   <script type="x-shader/x-vertex" id="vertshader2">
     varying vec2 vUv;
+
       // #include <color_vertex>
       varying vec3 vColor;
       uniform float u_time;
+
       //varying float time;
       //attribute float size;
     //   #ifdef GL_ES
     // precision highp float;
+
     // #endif
       void main() {
         vUv = uv;
@@ -83,26 +99,36 @@
   </script>
 
   <script type="x-shader/x-fragment" id="fragshader2">
+
         uniform sampler2D texture;
         varying vec2 vUv;
+
         precision highp float;
         uniform float u_time;
         varying vec3 vColor;
+
+
     //   #ifdef GL_ES
     // precision highp float;
     // #endif
       void main() {
+
         //gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0 );
         //gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+
+
         vec4 samplerColor = texture2D(texture, vUv);
+
         // float pi = 3.141592653589793;
         // float t = u_time / 1000.0;
         // float r = (sin(t) * 0.25 + 0.5);
         // float g = (sin(t + 2.0*pi/3.0) * 0.25 + 0.5);
         // float b = (sin(t + 4.0*pi/3.0) * 0.25 + 0.5);
+
         //float red = rand();
         // float grn = rand();
         // float blu = rand();
+
         //gl_FragColor = vec4(red, grn, blu, 1.0) * samplerColor;
         //gl_FragColor = vec4(r, g, b, 1.0) * samplerColor;
         gl_FragColor = vec4(0.0, 1.0, 1.0, 1.0 ) * samplerColor;
@@ -123,10 +149,13 @@ window.requestAnimFrame = (function(){
             window.setTimeout(callback, 1000 / 60);
           };
 })();
+
 // CONSTANT
+
 //box params
 CENTER_BOX = -400;
 BOX_SIDE_LENGTH = 2;
+
 solverIteration = 4; //whats this owo
 CONST_H = 0.1001;
 EPSILON = 600;
@@ -139,33 +168,42 @@ PARTICLE_SPACING = 0.05;
 PARTICLE_DISPLACING = 0.0; //for random particle offset
 REST_DENSITY = 6000;//Math.pow(1.0 / (PARTICLE_SPACING), 3); //currently 125 = 5*5*5 = # particles per unit, was 6378...why?
 GLOBAL_TIME = 0;
+
 //for tensile instability
 CONST_K = 0.01;
 CONST_N = 4;
+
 CONST_c = 0.01; //for viscosity
 DELTA_Q_ADD = new THREE.Vector3(0, 0, 0.01 * CONST_H); // TODO -- according to the paper, it should be a fixed point
+
 //for collisions
 SURFACE_OFFSET = 0.001;
 CONST_FRICTION = 0.5;
+
 //debugging
 DEBUG = true;
 DEBUG_W = false;
 DEBUG_DELTA_W = false;
+
 //effects
 TENSILE_INSTABILITY = true;//true; // pls check if this is used for anything first before you depend on this lmao
 VORTICITY_EFFECT = false;
 VISCOSITY_EFFECT = false;
+
 // Set the scene size.
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
+
 // Set some camera attributes.
 const VIEW_ANGLE = 45;
 const ASPECT = WIDTH / HEIGHT;
 const NEAR = 0.1;
 const FAR = 10000;
+
 // Get the DOM element to attach to
 const container =
     document.querySelector('#container');
+
 // Create a WebGL renderer, camera
 // and a scene
 const renderer = new THREE.WebGLRenderer();
@@ -176,19 +214,25 @@ const camera =
         NEAR,
         FAR
     );
+
 const scene = new THREE.Scene();
+
 if (DEBUG) {
     camera.translateY(0);
     camera.translateZ(-390);
     camera.zoom = 2;
 }
+
 // Add the camera to the scene.
 scene.add(camera);
+
 // Start the renderer.
 renderer.setSize(WIDTH, HEIGHT);
+
 // Attach the renderer-supplied
 // DOM element.
 container.appendChild(renderer.domElement);
+
 // // create a point light
 // const pointLight =
 //   new THREE.PointLight(0xFFFFFF);
@@ -200,6 +244,7 @@ container.appendChild(renderer.domElement);
 //
 // // add to the scene
 // scene.add(pointLight);
+
 // create the particle variables
 var particleCount = PARTICLE_PER_SIDE,
     particles = new Array();
@@ -208,12 +253,15 @@ var particleCount = PARTICLE_PER_SIDE,
     //     color: 0xFFFFFF
     // });
 /// now create the individual particles
+
 var uniforms = {
             texture:   { type:'t', value: new THREE.TextureLoader().load( "textures/sprite.png" ) }
         };
+
 var uniforms2 = {
             texture:   { type:'t', value: new THREE.TextureLoader().load( "textures/spark1.png" ) }
         };
+
 var shaderMaterial = new THREE.ShaderMaterial( {
         vertexShader:   document.getElementById( 'vertshader' ).textContent,
         fragmentShader: document.getElementById( 'fragshader' ).textContent,
@@ -225,6 +273,7 @@ var shaderMaterial = new THREE.ShaderMaterial( {
         //overdraw: 0.5,
         vertexColors:   THREE.FaceColors
       });
+
 var shaderMaterial2 = new THREE.ShaderMaterial( {
         vertexShader:   document.getElementById( 'vertshader2' ).textContent,
         fragmentShader: document.getElementById( 'fragshader2' ).textContent,
@@ -236,6 +285,7 @@ var shaderMaterial2 = new THREE.ShaderMaterial( {
         //overdraw: 0.5,
         vertexColors:   THREE.FaceColors
       });
+
 var sp_geometry = new THREE.SphereGeometry(0.05);
 var sp_material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
 //try making this closer?
@@ -247,12 +297,14 @@ for(var p = 0; p < particleCount; p++) {
     for (var r = 0; r < particleCount; r++) {
       // create a particle with random
       // position values, -250 -> 250
+
                                                      //could this be causing the particles to fall out of the sides when the cube drops?
       var pX = (p - (particleCount / 2.0)) * spacer, //+ (Math.random() * PARTICLE_DISPLACING),
         pY = (q - (particleCount / 2.0)) * spacer,
-        pZ = pZ = (r - (particleCount / 2.0)) * spacer; //+ (Math.random() * PARTICLE_DISPLACING) + CENTER_BOX,
+        pZ = pZ = (r - (particleCount / 2.0)) * spacer; //+ (Math.random() * PARTICLE_DISPLACING) + CENTER_BOX;
     var material2 = new THREE.MeshBasicMaterial( { color: new THREE.Color(p/particleCount, q/particleCount, 0) } ),
         particle;
+
         if (r % 2 == 0) {
             particle = new THREE.Mesh(sp_geometry, shaderMaterial2);
         }
@@ -276,6 +328,7 @@ for(var p = 0; p < particleCount; p++) {
     }
   }
 }
+
 console.log("particles:", particles);
 // for(var p = 0; p < particleCount; p++) {
 //
@@ -287,9 +340,9 @@ console.log("particles:", particles);
 //         particle = new THREE.Vector3(pX, pY, pZ);
 //     // create a velocity vector
 //     particle.velocity = new THREE.Vector3(
-//         0,               // x
-//         0,               // y
-//         0);              // z
+//         0,       // x
+//         0,             // y
+//         0);        // z
 //
 //     particle.mass = MASS;
 //     // add it to the geometry
@@ -297,14 +350,18 @@ console.log("particles:", particles);
 //
 //     particle.external_force = new THREE.Vector3(0, -9.8, 0);
 // }
+
 // create the particle system
 // var particleSystem = new THREE.Points(
 //     particles,
 //     pMaterial);
+
 // add it to the scene
 // scene.add(particleSystem);
+
 // TESTING
 // console.log(spatial_map_hash(0.1, 0.2, 0.3, 1, 1, 1, 0.1)); => 1,2,3
+
 testBox = new THREE.BoxGeometry(BOX_SIDE_LENGTH, BOX_SIDE_LENGTH, BOX_SIDE_LENGTH);
 // var geometry = new THREE.BoxGeometry(200, 200, 200);
 var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
@@ -315,12 +372,14 @@ scene.add(cube);
         //where is this defined??
 testBox.computeBoundingBox();
 testBox.boundingBox.translate(cube.position);
+
 LEFT_X = testBox.boundingBox.min.x;
 RIGHT_X = testBox.boundingBox.max.x;
 DOWN_Y = testBox.boundingBox.min.y;
 UP_Y = testBox.boundingBox.max.y;
 FRONT_Z = testBox.boundingBox.max.z;
 BACK_Z = testBox.boundingBox.min.z;
+
 // FACE REFERENCES:
 // [0-1] = right face
 // [2-3] = left face
@@ -328,12 +387,14 @@ BACK_Z = testBox.boundingBox.min.z;
 // [6-7] = bottom face
 // [8-9] = back
 // [10-11] = front
+
 RIGHT_FACE = testBox.faces[0]
 LEFT_FACE = testBox.faces[2]
 TOP_FACE = testBox.faces[4]
 BOTTOM_FACE = testBox.faces[6]
 BACK_FACE = testBox.faces[8]
 FRONT_FACE = testBox.faces[10]
+
 function* particleIterator() {
     var pCount = particles.length;
     // console.log(particles);
@@ -343,6 +404,7 @@ function* particleIterator() {
         yield particle;
     }
 }
+
 function W(r, h) {
     // TODO -- because who knows if it works hahahahaha
     // based on poly6
@@ -354,8 +416,10 @@ function W(r, h) {
     }
     var res = (315 / (64 * Math.PI * Math.pow(h, 9))) * multiplier
     // console.log(res);
+
     return res;
 }
+
 function deltaW(r, h) {
     // console.log(r);
     // TODO - absolutely copy pasted, so be careful
@@ -372,14 +436,20 @@ function deltaW(r, h) {
             console.log("what");
         }
     }
+
     return res;
 }
+
+
+
 console.log("friendly reminder that you're using testbox as boundaries for spatial map."); // TODO -- as written
+
 function force_external(x) {
     var result = new THREE.Vector3(0, -9.8, 0);
     result.add(x.external_force);
     return result;
 }
+
 calcd = 0;
 updateCt = -1;
 MAXprecalcCt = 300;
@@ -389,14 +459,17 @@ data_storage = new Map();
 DONE = false;
 // animation loop
 function update() {
+
     // console.log("update: ", updateCt);
     // // console.log("particles: ", particles);
     //
     // if (updateCt == 47) {
     //     console.log("hammertime");
     // }
+
     GLOBAL_TIME++;
     updateCt += 1;
+
     //calculate first
     if (PREANIM) {
         if (updateCt == 0) {
@@ -414,24 +487,32 @@ function update() {
             for (let particle of particleIterator()) {
                 particle.position.copy(curr_data_map.get(particle.uuid));
             }
+
             renderer.render(scene, camera);
+
             requestAnimFrame(update);
             return;
         }
     }
+
     if (updateCt % 20 == 0) {
             console.log("updateCt", updateCt, "CALCULATING_BOOL", CALCULATING_BOOL);
     }
+
     // L1-4
     for (let particle of particleIterator()) {
         // console.log(particle);
         // console.log("ef", particle.external_force);
         // console.log("fe", force_external(particle));
+
         particle.velocity.add(force_external(particle).clone().multiplyScalar(TIMESTEP));
         particle.newPosition = particle.oldPosition.clone().add(particle.velocity.clone().multiplyScalar(TIMESTEP));
         // console.log(particle);
     }
+
     neighborsMap = build_spatial_map(particles, particles.length, testBox, GRID_SIZE);
+
+
     // L8-19
     for(var i=0; i < solverIteration; i++){
         // L9-11
@@ -442,6 +523,7 @@ function update() {
             // }
             var rho_i = 0; // (1) and (2)
             var rho_0 = REST_DENSITY; // TODO -- what should this be? corresponds to (1)
+
             for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                 //weight function is highest when pi - pj = 0
                 //maybe sum over all j includes j = i??
@@ -451,6 +533,7 @@ function update() {
                 // console.log("la", particle_j);
                 // why not clone i position?
                 var diff_ij = particle_i.newPosition.clone().sub(particle_j.newPosition);
+
                 //this is wrong for some reason
                 //initial density too low
                 //maybe calculate initial density based on W
@@ -461,13 +544,17 @@ function update() {
                 // }
                 rho_i += particle_j.mass * y;
             }
+
             var C_i = (rho_i / rho_0) - 1;
+
+
             // calculating denominator
             var denom_sum = 0;
             // console.log("k", particle_i);
             for (let particle_k of getNeighborsThisMap(particle_i, neighborsMap)) {
                 var multiplier = new THREE.Vector3();
                 if (particle_k == particle_i) {
+
                     for (let particle_j of getNeighborsThisMap(particle_i, neighborsMap)) {
                         if (particle_i == particle_j) {
                             //continue;
@@ -497,13 +584,16 @@ function update() {
                     }
                     multiplier = x;
                 }
+
                 //scalar???
                 deltaC_i = multiplier.multiplyScalar(1 / rho_0);
                 denom_sum += Math.pow(deltaC_i.length(), 2);
             }
+
             //error?? should it be particle_i or just particle
             particle_i.lambda = -1 * (C_i / (denom_sum + EPSILON));
         }
+
         // L12-15
         for (let particle_i of particleIterator()) {
             delta_p_i = new THREE.Vector3();
@@ -521,14 +611,19 @@ function update() {
                 }
                 delta_p_i.add(deltaW(diff_ij, CONST_H).multiplyScalar(particle_i.lambda + particle_j.lambda + s_corr));
             }
+
+
             particle_i.delta = delta_p_i.multiplyScalar(1/REST_DENSITY);
+
             if (GLOBAL_TIME == 2) {
               console.log("pi: " + particle_i.uuid);
               console.log("rho i: " + rho_i);
               console.log("rho 0: " + rho_0);
               console.log(particle_i.delta);
             }
+
             // TODO - L14 - PERFORM COLLISION DETECTION AND RESPONSE -- NOT REALLY
+
             // if (particle_i.newPosition.y <= testBox.boundingBox.min.y) {
             //     console.log("let's fight");
             // }
@@ -544,24 +639,32 @@ function update() {
             //     newnew = (new THREE.Vector3(constraint_2, constraint_2, constraint_2)).multiplyScalar(-1 * particle_i.lambda * (1/particle_i.mass));
             //     particle_i.delta.add(newnew);
             // }
+
+
         }
+
         // L16-18
         for (let particle of particleIterator()) {
             particle.newPosition.add(particle.delta);
         }
     }
+
     // console.log("particle", particles);
     var eta;
     var big_N;
     var f_vorticity;
+
     if (PREANIM) {
         curr_data_map = new Map();
         data_storage.set(updateCt, curr_data_map);
     }
+
     for (let particle_i of particleIterator()) {
         // UPDATE VELOCITY -- L21
         particle_i.velocity = particle_i.newPosition.clone().sub(particle_i.oldPosition).multiplyScalar(1 / TIMESTEP);
+
         // TODO -- L22 - APPLY VORTIICITY CONFINEMENT AND XSPH VISCOSCITY
+
         // EQ (15-16)
         if (VORTICITY_EFFECT) {
             // TODO -- not done at all
@@ -574,18 +677,24 @@ function update() {
                 v_ij.multiply(deltaW(particle_j.position.clone().sub(particle_i), CONST_H));
                 omega_i.add(v_ij);
             }
+
             eta = new THREE.Vector3(omega_i.length(), omega_i.length(), omega_i.length());
+
             big_N = eta.clone().multiplyScalar(1 / eta.length());
+
             f_vorticity = big_N.multiply(omega_i).multiplyScalar(EPSILON);
+
             // if (f_vorticity.y > 1000) {
             //     console.log("stop");
             // }
+
             particle_i.external_force.add(f_vorticity);
             // if (updateCt >= 47) {
             // console.log("f_vorticity", f_vorticity);
             // console.log("particle_i.external_force", particle_i.external_force);
             // }
         }
+
         // CALCULATING XSPH VISCOSITY -- EQ (17)
         if (VISCOSITY_EFFECT) {
             var v_new_sum = new THREE.Vector3();
@@ -594,8 +703,10 @@ function update() {
                 v_ij = particle_j.velocity.clone().sub(particle_i.velocity);
                 v_new_sum.add(v_ij.multiplyScalar(W(particle_j.position.clone().sub(particle_i), CONST_H)));
             }
+
             particle_i.velocity.add(v_new_sum.multiplyScalar(CONST_c));
         }
+
         // if (particle_i.newPosition.y <= -100) {
         //     particle_i.newPosition.y = -100;
         // }
@@ -616,77 +727,100 @@ function update() {
         // if (particle_i.newPosition.z >= -300) {
         //     particle_i.newPosition.z = -300;
         // }
+
         // CLOTHSIM-STYLE COLLISION HANDLING
+
         //// axis x
         if (particle_i.newPosition.x <= testBox.boundingBox.min.x) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
             tangent = particle_i.oldPosition.clone();
             tangent.x = LEFT_X;
             tangent.x += SURFACE_OFFSET;
+
             correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
             particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.x = 0;
         }
+
         if (particle_i.newPosition.x >= testBox.boundingBox.max.x) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
             tangent = particle_i.oldPosition.clone();
             tangent.x = RIGHT_X;
             tangent.x -= SURFACE_OFFSET;
+
             correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
             particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.x = 0;
         }
+
         //// axis y
         if (particle_i.newPosition.y <= testBox.boundingBox.min.y) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
             tangent = particle_i.oldPosition.clone();
             tangent.y = DOWN_Y;
             tangent.y += SURFACE_OFFSET;
+
             correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
             particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.y = 0;
         }
+
         if (particle_i.newPosition.y >= testBox.boundingBox.max.y) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
             tangent = particle_i.oldPosition.clone();
             tangent.y = UP_Y;
             tangent.y -= SURFACE_OFFSET;
+
             correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
             particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.y = 0;
         }
+
         //// axis z
         if (particle_i.newPosition.z <= testBox.boundingBox.min.z) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
             tangent = particle_i.oldPosition.clone();
             tangent.z = BACK_Z;
             tangent.z += SURFACE_OFFSET;
+
             correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
             particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.z = 0;
         }
+
         ////disabled to keep front side open to shoot into
         if (particle_i.newPosition.z >= testBox.boundingBox.max.z) {
             // ray = new THREE.Ray(particle_i, BOTTOM_FACE.normal.clone().multiplyScalar(-1));
             tangent = particle_i.oldPosition.clone();
             tangent.z = FRONT_Z;
             tangent.z -= SURFACE_OFFSET;
+
             correction_vector = tangent.clone().sub(particle_i.oldPosition);
+
             particle_i.newPosition = particle_i.oldPosition.clone().add(correction_vector.multiplyScalar(1-CONST_FRICTION));
             particle_i.velocity.z = 0;
         }
+
         particle_i.oldPosition.x = particle_i.newPosition.x;
         particle_i.oldPosition.y = particle_i.newPosition.y;
         particle_i.oldPosition.z = particle_i.newPosition.z;
+
         if (PREANIM) {
             curr_data_map.set(particle_i.uuid, particle_i.newPosition.clone());
         } else {
             particle_i.position.x = particle_i.newPosition.x;
             particle_i.position.y = particle_i.newPosition.y;
             particle_i.position.z = particle_i.newPosition.z;
+
         }
         // particle_i.geometry.verticesNeedUpdate = true;
     }
+
     // flag to the particle system that we've
     // changed its vertices. This is the
     // dirty little secret.
@@ -695,9 +829,12 @@ function update() {
     if (!PREANIM & !CALCULATING_BOOL) {
             renderer.render(scene, camera);
     }
+
     // set up the next call
     requestAnimFrame(update);
+
 }
 requestAnimFrame(update);
+
 </script>
 </body>
