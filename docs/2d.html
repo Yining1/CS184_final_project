@@ -160,7 +160,7 @@ solverIteration = 4; //whats this owo
 CONST_H = 0.1001;
 EPSILON = 600;
 TIMESTEP = 0.005; // TODO -- change as needed
-PARTICLE_PER_SIDE = 12;
+PARTICLE_PER_SIDE = 24;
 MASS = 1;
 //taking the grid away for now, should be correct but slower
 GRID_SIZE = BOX_SIDE_LENGTH;
@@ -187,8 +187,8 @@ DEBUG_DELTA_W = false;
 
 //effects
 TENSILE_INSTABILITY = true;//true; // pls check if this is used for anything first before you depend on this lmao
-VORTICITY_EFFECT = false;
-VISCOSITY_EFFECT = false;
+VORTICITY_EFFECT = true;
+VISCOSITY_EFFECT = true;
 
 // Set the scene size.
 const WIDTH = window.innerWidth;
@@ -452,7 +452,7 @@ function force_external(x) {
 
 calcd = 0;
 updateCt = -1;
-MAXprecalcCt = 300;
+MAXprecalcCt = 400;
 PREANIM = true;
 CALCULATING_BOOL = false;
 data_storage = new Map();

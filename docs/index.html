@@ -31,7 +31,7 @@
 <!-- <br><br> -->
 
 <h2 align="middle">Abstract</h2>
-<p>In this project, we built a 3D fluid simulator based off of <a href='http://mmacklin.com/pbf_sig_preprint.pdf'> Position Based Fluids</a>, by Macklin and Muller. We ultimately created this project in conjunction with Three.js and WebGL to create a fluid simulation that can run in any browser, on any html-running device. This fluid sim incoporates different fluid properties such as incompressibility, tensile instability, viscosity, and vorticity. </p>
+<p>In this project, we built a 3D fluid simulator based off of <a href='http://mmacklin.com/pbf_sig_preprint.pdf'> Position Based Fluids</a>, by Macklin and Muller. We ultimately created this project in conjunction with Three.js and WebGL to create a fluid simulation that can run in any browser, on any html-running device. This fluid sim incoporates different fluid properties such as incompressibility and tensile instability, vorticity, and velocity.</p>
 
 <h2 align="middle">Technical Approach</h2>
 <p> We referenced <a href="http://mmacklin.com/pbf_sig_preprint.pdf">this</a> paper when implementing our fluid simulation. It modfies the SPH (Smoothed Particle Hydrodynamics) method for particle-based fluid simulation, using the unconditionally stable PBD (Position Based Dynamics) framework to facilitate real-time applications. It also modifies PBD by replacing Gauss-Seidel iteration with Jacobi iteration. In this method, we have one constraint equation for each particle, based on the positions of all other particles. We have a set of initial positions of the particles, and in each time step we iteratively update each particle's position individually by plugging the positions of the rest of the particles from the last time step into its constraint equation. Here we provide a simplified overview of the method outlined in the paper. </p>
@@ -146,7 +146,10 @@ $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
 
 <h2 align="middle">Results</h2>
 <h3 align="middle">Final Result:</h3>
-<p>This is pretty exciting, because anyone could open this code on their browser! Here's the 2d result, make sure to <b>wait for about a minute for all the calculations to run, and also you can right click inspect to see the progress of it loading, it should finish at 300: </b> <a href="2d.html" target="_blank">this</a>. And for the 3D version, click <a href="wip3.html" target="_blank">this</a></p>
+<p>This is pretty exciting, because anyone could open this code on their browser! Here's the 2d result, make sure to <b>wait for about a minute for all the calculations to run, and also you can right click inspect to see the progress of it loading, it should finish at 400: </b> <a href="2d.html" target="_blank">this</a>. And for the 3D version, click <a href="wip3.html" target="_blank">this</a></p>
+
+<h2 align="middle">Video</h2>
+<p><a href="https://drive.google.com/file/d/1k_TOd0Xn7GsqLeOmrpxmOp2EqYFG4iox/view?usp=sharing" target="_blank">Click here!</a></p>
 
 <h2 align="middle">References</h2>
 <p>Papers:</p>
@@ -172,6 +175,35 @@ $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
 
 
 <h2 align="middle">Contributions from each team member</h2>
+<li>Anna Brewer:
+    <ul>
+      <li>Implemented Shaders</li>
+      <li>Made sure incompressibility held</li>
+      <li>Debugging</li>
+    </ul>
+</li>
+<li>Regina Ongowarsito:
+    <ul>
+      <li>Got everyone sick</li>
+      <li>Implemented Spacial Hashing</li>
+      <li>Implemented incompressibility</li>
+      <li>Attempted vorticity and viscocity</li>
+
+    </ul>
+</li>
+<li>Yining Chen:
+<ul>
+      <li>Attempted implementing physi.js</li>
+      <li>Attempted implementing collision</li>
+      <li>Debugging</li>
+    </ul>
+</li>
+<li>Dillon Yao:
+<ul>
+      <li>Saved us 6 hours from the deadline, did in two hours what we tried for five days</li>
+      <li>we love you</li>
+    </ul>
+</li>
 
 <h2 align="middle">Previous writeups</h2>
 
