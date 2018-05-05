@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/latest.js?config=TeX-MML-AM_CHTML' async></script>
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2018</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Anna Brewer, CS184-ahm</h2>
+
+<br><br>
+
+<h2 align="middle">Technical Approach</h2>
+<p> We referenced <a href="http://mmacklin.com/pbf_sig_preprint.pdf">this</a> paper when implementing our fluid simulation. It modfies the SPH (Smoothed Particle Hydrodynamics) method for particle-based fluid simulation, using the unconditionally stable PBD (Position Based Dynamics) framework to facilitate real-time applications. It also modifies PBD by replacing Gauss-Seidel iteration with Jacobi iteration. In this method, we have one constraint equation for each particle, based on the positions of all other particles. We have a set of initial positions of the particles, and in each time step we iteratively update each particle's position individually by plugging the positions of the rest of the particles from the last time step into its constraint equation. Here we provide a simplified overview of the method outlined in the paper. </p>
+<p>
+We get the constraints using the ratio between the SPH density estimator \(p_i\) and the rest density \(p_0\). We want the density of the fluid to stay close to the rest density, so the particles should move in a way that brings this ratio closer to 1. Each particle's constraint (which is a function of the position of all the other particles) is the difference between the current ratio and the ideal ratio of 1:
+$$ \frac{p_i}{p_0} - C_i(p_1...p_n) = 1 $$</p>
+
+<p>The SPH density estimator \(p_i\) is defined as follows: 
+$$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
+<p>\(W\) represents the weight function, which defines how much the effect of each particle \(p_j\) on the current particle \(p_i\) decreases as a function of their distance \(p_i - p_j\) . In this case, we are using the Poly6 kernel, which looks similar to a Gaussian distribution. </p>
+
+<p>We have a vector of particle positions \(p\), and we're looking for a vector of position corrections \(\Delta p\) such that \(C(p + \Delta p) = 0\), meaning each particle \(p_i\) has moved such that \(\frac{p_i}{p_0} = 1\). </p>
+
+<p>We know that \(\Delta p = \nabla C(p)\lambda\), where \(\Delta C\) is the gradient of \(C\), and \(\lambda\) is a scaling factor. Using a series of Newton steps along the gradient, we have 
+    $$ C(p + \Delta p) \approx C(p) + \nabla C^T \nabla C \lambda $$
+</p>
+<p>For each particle \(p_i\), we want to calculate \(\nabla_{p_k}C_i\) for every \(p_k\), including \(p_i\) itself. </p>
+<p>When \(p_k\) = \(p_i\), we have:
+    $$ \nabla_{p_k}C_i = \frac{1}{p_0} \sum_j \nabla_{p_k}W(p_i - p_j, h) $$
+</p>
+<p>When \(p_k\) = \(p_j\), we have:
+    $$ \nabla_{p_k}C_i = -\frac{1}{p_0} \nabla_{p_k}W(p_i - p_j, h) $$
+</p>
+
+<p>\(\nabla C \) is a matrix where each entry is \(\nabla_{p_k} Ci \) for some \(i, k\). Again, we want \(C(p + \Delta p)\) to be approximately 0, so we have: 
+    $$ \begin{align*}
+    0 &= C(p) + \nabla C^T \nabla C \lambda \\
+    -C(p) &= \nabla C^T \nabla C \lambda \\
+    \frac{-C(p)}{\nabla C^T \nabla C} &= \lambda
+    \end{align*}
+    $$
+</p>
+<p> We now have an equation
+
+
+
+
+
+
+</body>
+</html>
