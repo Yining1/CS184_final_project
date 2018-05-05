@@ -250,7 +250,7 @@ for(var p = 0; p < particleCount; p++) {
                                                      //could this be causing the particles to fall out of the sides when the cube drops?
       var pX = (p - (particleCount / 2.0)) * spacer, //+ (Math.random() * PARTICLE_DISPLACING),
         pY = (q - (particleCount / 2.0)) * spacer,
-        pZ = 0;//pZ = (r - (particleCount / 2.0)) * spacer; //+ (Math.random() * PARTICLE_DISPLACING) + CENTER_BOX,
+        pZ = 0,//pZ = (r - (particleCount / 2.0)) * spacer; //+ (Math.random() * PARTICLE_DISPLACING) + CENTER_BOX,
     var material2 = new THREE.MeshBasicMaterial( { color: new THREE.Color(p/particleCount, q/particleCount, 0) } ),
         particle;
         if (r % 2 == 0) {
