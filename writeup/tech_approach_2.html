@@ -48,7 +48,7 @@ $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
     $$ \nabla_{p_k}C_i = -\frac{1}{p_0} \nabla_{p_k}W(p_i - p_j, h) $$
 </p>
 
-<p>\(\nabla C \) is a matrix where each entry is \(\nabla_{p_k} Ci \) for some \(i, k\). Again, we want \(C(p + \Delta p)\) to be 0, so we have: 
+<p>\(\nabla C \) is a matrix where each entry is \(\nabla_{p_k} C_i \) for some \(i, k\). Again, we want \(C(p + \Delta p)\) to be 0, so we have: 
     $$ \begin{align*}
     0 &= C(p) + \nabla C^T \nabla C \lambda \\
     -C(p) &= \nabla C^T \nabla C \lambda \\
@@ -95,7 +95,7 @@ $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
     \nabla W_{spiky}(r, h) = \frac{45}{\pi h^6}(h - |r|)^2 \frac{r}{|r|}
     $$
 
-    Note that because these kernels have high values, the rest density of the fluid is much higher than the number of simulation particles per unit (this was a bug we had, which caused our cube of particles to explode!) We found that a rest density of approximately 6,000 worked well.
+    Note that because these kernels have high values, the rest density of the fluid is much higher than the number of simulation particles per unit (this was a bug we had, which caused our cube of fluid particles to explode!) We found that a rest density of approximately 6,000 worked well.
 </p>
 
 <p>
