@@ -30,6 +30,9 @@
 
 <!-- <br><br> -->
 
+<h2 align="middle">Abstract</h2>
+<p>In this project, we built a 3D fluid simulator based off of <a href='http://mmacklin.com/pbf_sig_preprint.pdf'> Position Based Fluids</a>, by Macklin and Muller. We ultimately created this project in conjunction with Three.js and WebGL to create a fluid simulation that can run in any browser, on any html-compatible device. This fluid sim incoporates different fluid properties such as incompressibility, tensile instability, viscosity, and vorticity. </p>
+
 <h2 align="middle">Technical Approach</h2>
 <p> We referenced <a href="http://mmacklin.com/pbf_sig_preprint.pdf">this</a> paper when implementing our fluid simulation. It modfies the SPH (Smoothed Particle Hydrodynamics) method for particle-based fluid simulation, using the unconditionally stable PBD (Position Based Dynamics) framework to facilitate real-time applications. It also modifies PBD by replacing Gauss-Seidel iteration with Jacobi iteration. In this method, we have one constraint equation for each particle, based on the positions of all other particles. We have a set of initial positions of the particles, and in each time step we iteratively update each particle's position individually by plugging the positions of the rest of the particles from the last time step into its constraint equation. Here we provide a simplified overview of the method outlined in the paper. </p>
 <p>
@@ -40,12 +43,39 @@ $$ \frac{p_i}{p_0} - C_i(p_1...p_n) = 1 $$</p>
 $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
 <p>\(W\) represents the weight function, which defines how much the effect of each particle \(p_j\) on the current particle \(p_i\) decreases as a function of their distance \(p_i - p_j\) . In this case, we are using the Poly6 kernel, which looks similar to a Gaussian distribution. </p>
 
-<p>We're looking for a particle position correction \(\Delta p\) such that \(C(p + \Delta p) = 0\), meaning the particle has moved such that \(\frac{p_i}{p_0} = 1\). </p>
+<p>We have a vector of particle positions \(p\), and we're looking for a vector of position corrections \(\Delta p\) such that \(C(p + \Delta p) = 0\), meaning each particle \(p_i\) has moved such that \(\frac{p_i}{p_0} = 1\). </p>
 
-<p>We know that \(\Delta p = \nabla C(p)\lambda\), where \(\Delta C\) is the gradient of \(C\) (roughly, the vector direction the particle should be moving in) and \(\lambda\) is a scaling factor. Using a series of Newton steps along the gradient, we have 
-    $$ (C(p + \Delta p)) \approx C(p) + \nabla C^T \nabla C \lambda $$
+<p>We know that \(\Delta p = \nabla C(p)\lambda\), where \(\Delta C\) is the gradient of \(C\), and \(\lambda\) is a scaling factor. Using a series of Newton steps along the gradient, we have 
+    $$ C(p + \Delta p) \approx C(p) + \nabla C^T \nabla C \lambda $$
 </p>
-<p> We 
+<p>For each particle \(p_i\), we want to calculate \(\nabla_{p_k}C_i\) for every \(p_k\), including \(p_i\) itself. </p>
+<p>When \(p_k\) = \(p_i\), we have:
+    $$ \nabla_{p_k}C_i = \frac{1}{p_0} \sum_j \nabla_{p_k}W(p_i - p_j, h) $$
+</p>
+<p>When \(p_k\) = \(p_j\), we have:
+    $$ \nabla_{p_k}C_i = -\frac{1}{p_0} \nabla_{p_k}W(p_i - p_j, h) $$
+</p>
+
+<p>\(\nabla C \) is a matrix where each entry is \(\nabla_{p_k} Ci \) for some \(i, k\). Again, we want \(C(p + \Delta p)\) to be approximately 0, so we have: 
+    $$ \begin{align*}
+    0 &= C(p) + \nabla C^T \nabla C \lambda \\
+    -C(p) &= \nabla C^T \nabla C \lambda \\
+    \frac{-C(p)}{\nabla C^T \nabla C} &= \lambda
+    \end{align*}
+    $$
+</p>
+
+<!-- <div align="middle">
+  <table>
+    <tr>
+        <td>
+          <img src="images/pseudocode.png" align="middle" width="500px"/>
+          <figcaption align="middle">Pseudocode used</figcaption>
+        </td>
+    </tr>
+  </table>
+</div> -->
+
 
 <h2 align="middle">Problems Encountered</h2>
 
@@ -63,18 +93,45 @@ $$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
 <h2 align="middle">Lessons Learned</h2>
 
 <p>All three of us were surprised by how much we learned outside of coding. It took all of us a much longer time than expected truly understanding the paper that we based our code off of. As a result, we developed a better understanding on how to read code-related scientific papers, as well as a knack for figuring out how to connect the different parts of the equations together from older scientific papers. </p>
+
 <p>Another more general life lesson we learned was not only to start earlier, but to properly commit to an idea. A lot of time was wasted trying to do a lot of things that none of us were fully committed to, kind of like a franken-project. Even during the last week we threw around the idea of converting our code to OpenGL to be able to speed up the process before we came up with our caching mechanism. </p>
-<p> While ultimately, a waterbending VR leapmotion simulator would have been pretty incredible to implement and play with, we definitely underestimated</p>
+
+<p> While ultimately, a waterbending VR leapmotion simulator would have been pretty incredible to implement and play with, we definitely underestimated the magnitude of work that each one of these implementations would have taken, and timing wasn't great considering we were all a bit stubborn on admitting we should let portions of the work go. This could have been partly due to our inexperience in new technologies like this, so in the future, with this project under our belt, we could properly gauge the amount of time that these types of projects would take. </p>
 
 <h2 align="middle">Results</h2>
+<h3 align="middle">Final Result:</h3>
+<p>Here's the result, make sure to <b>wait for about half a minute for all the calculations to run: </b> <a href="workplace.html" target="_blank">this</a></p> 
 
 <h2 align="middle">References</h2>
-<a href="workplace.html">this</a>
+<p>Papers:</p>
+<ul>
+  <li><a target="_blank" href='http://mmacklin.com/pbf_sig_preprint.pdf'> Position Based Fluids paper</a></li>
+  <li><a target="_blank" href='https://nccastaff.bournemouth.ac.uk/jmacey/MastersProjects/MSc15/06Burak/BurakErtekinMScThesis.pdf'> W function</a></li>
+  <li><a target="_blank" href='https://www.usm.uni-muenchen.de/CAST/talks/sphtalk.pdf'> Smoothed Particle Hydrodynamics (SPH)</a></li>
+  <li><a target="_blank" href='http://matthias-mueller-fischer.ch/publications/posBasedDyn.pdf '> Position based dynamics</a></li>
+</ul>
+
+<p>Three.js:</p>
+<ul>
+<li><a target="_blank" href='http://matthias-mueller-fischer.ch/publications/posBasedDyn.pdf '> Spatial hashing library for three.js </a></li>
+  <li><a target="_blank" href='https://aerotwist.com/tutorials/getting-started-with-three-js/ '> Three.js starter tutorial</a></li>
+  <li><a target="_blank" href='https://aerotwist.com/tutorials/creating-particles-with-three-js/'> Three.js particle starter tutorial</a></li>
+</ul>
+
+<p>Optimizing and Parameters</p>
+<ul>
+<li><a target="_blank" href='https://link.springer.com/content/pdf/10.1007/978-3-642-14533-9_61.pdf'> Collision Detection Optimization </a></li>
+  <li><a target="_blank" href='http://graphics.stanford.edu/courses/cs348c/PA1_PBF2016/index.html'> Suggested parameters from similar Stanford project</a></li>
+</ul>
+
 
 <h2 align="middle">Contributions from each team member</h2>
 
+<h2 align="middle">Previous writeups</h2>
 
+<p><b>Proposal: </b><a target="_blank" href="proposal.html">here</a></p>
 
+<p><b>Midpoint checkup: </b> <a target="_blank" href="midpoint.html">here</a></p> 
 
 </body>
 </html>
