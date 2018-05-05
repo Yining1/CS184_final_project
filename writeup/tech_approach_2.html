@@ -1,0 +1,105 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/latest.js?config=TeX-MML-AM_CHTML' async></script>
+</head>
+
+
+
+<body>
+
+<h2 align="middle">Technical Approach</h2>
+<p> We referenced <a href="http://mmacklin.com/pbf_sig_preprint.pdf">this</a> paper when implementing our fluid simulation. It modfies the SPH (Smoothed Particle Hydrodynamics) method for particle-based fluid simulation, using the unconditionally stable PBD (Position Based Dynamics) framework to facilitate real-time applications. It also modifies PBD by replacing Gauss-Seidel iteration with Jacobi iteration. In this method, we have one constraint equation for each particle, based on the positions of all other particles. We have a set of initial positions of the particles, and in each time step we iteratively update each particle's position individually by plugging the positions of the rest of the particles from the last time step into its constraint equation. Here we provide a simplified overview of the method outlined in the paper. </p>
+<p>
+We get the constraints using the ratio between the SPH density estimator \(p_i\) and the rest density \(p_0\). We want the density of the fluid to stay close to the rest density, so the particles should move in a way that brings this ratio closer to 1. Each particle's constraint (which is a function of the position of all the other particles) is the difference between the current ratio and the ideal ratio of 1:
+$$ \frac{p_i}{p_0} - C_i(p_1...p_n) = 1 $$</p>
+
+<p>The SPH density estimator \(p_i\) is defined as follows: 
+$$ p_i = \sum_{j}W(p_i - p_j, h) $$</p>
+<p>\(W\) represents the weight function, which defines how much the effect of each particle \(p_j\) on the current particle \(p_i\) decreases as a function of their distance \(p_i - p_j\) . In this case, we are using the Poly6 kernel, which looks similar to a Gaussian distribution. </p>
+
+<p>We have a vector of particle positions \(p\), and we're looking for a vector of position corrections \(\Delta p\) such that \(C(p + \Delta p) = 0\), meaning each particle \(p_i\) has moved such that \(\frac{p_i}{p_0} = 1\). </p>
+
+<p>We know that \(\Delta p = \nabla C(p)\lambda\), where \(\Delta C\) is the gradient of \(C\), and \(\lambda\) is a scaling factor. Using a series of Newton steps along the gradient, we get: 
+    $$ C(p + \Delta p) \approx C(p) + \nabla C^T \nabla C \lambda $$
+</p>
+<p>For each particle \(p_i\), we want to calculate \(\nabla_{p_k}C_i\) for every \(p_k\), including \(p_i\) itself. </p>
+<p>When \(p_k\) = \(p_i\), we have:
+    $$ \nabla_{p_k}C_i = \frac{1}{p_0} \sum_j \nabla_{p_k}W(p_i - p_j, h) $$
+</p>
+<p>When \(p_k\) = \(p_j\), we have:
+    $$ \nabla_{p_k}C_i = -\frac{1}{p_0} \nabla_{p_k}W(p_i - p_j, h) $$
+</p>
+
+<p>\(\nabla C \) is a matrix where each entry is \(\nabla_{p_k} C_i \) for some \(i, k\). Again, we want \(C(p + \Delta p)\) to be 0, so we have: 
+    $$ \begin{align*}
+    0 &= C(p) + \nabla C^T \nabla C \lambda \\
+    -C(p) &= \nabla C^T \nabla C \lambda \\
+    \frac{-C(p)}{\nabla C^T \nabla C} &= \lambda
+    \end{align*}
+    $$
+</p>
+<p>And \(\nabla C_i^T \nabla C_i\) is simply the length of the vector \(C_i\). We now have an equation for \(\lambda_i\), the scaling factor for particle \(p_i\): </p>
+    $$
+    \lambda_i =  - \frac{C_i(p_1...p_n)}{\sum_k |\nabla_{p_k}C_i|^2}
+    $$
+</p>
+<p>
+    To reduce instability, we add a small relaxation parameter \(\epsilon\) to the denominator of this equation, giving us:
+    $$
+    \lambda_i =  - \frac{C_i(p_1...p_n)}{\sum_k |\nabla_{p_k}C_i|^2 + \epsilon}
+    $$
+</p>
+<p>Putting it all together, we can now calculate \(\Delta p_i\) for each particle using Jacobi iteration.</p>
+    $$
+    \Delta p_i = \frac{1}{\rho_0}\sum_j(\lambda_i + \lambda_j)\nabla W(p_i - p_j, h)
+    $$
+</p>
+<p>Tensile instability in the simulation leads to clumping of the particles. In order to reduce this effect, we introduce an artificial repulsive pressure term between all particles. This is done by subtracting off a small vector in the direction of the particle's motion, \(s_{corr}\), which is defined using the Poly6 smoothing kernel itself:
+    $$
+    s_{corr} = -k\bigg(\frac{W(p_i - p_j, h)}{W(\Delta q, h)}\bigg)^n
+    $$
+
+    Here, \(\Delta q \) is a number between 0 and \(h\), which is used to sample \(W\), and \(k\) is a small positive constant. We add \(s_{corr}\) to our scaling factors in our main equation, giving us:
+    $$
+
+    \Delta p_i = \frac{1}{\rho_0}\sum_j(\lambda_i + \lambda_j + s_{corr})\nabla W(p_i - p_j, h)
+
+    $$
+
+    Here is the equation for the Poly6 kernel, which is used to weight the particles according to distance:
+
+    $$
+    W_{poly_6}(r, h) = \frac{315}{64\pi h^9}(h^2 - |r|^2)^3
+    $$
+
+    And here is the equation for the Spiky kernel, which is used to calculate the gradient of \(W\):
+    $$
+    \nabla W_{spiky}(r, h) = \frac{45}{\pi h^6}(h - |r|)^2 \frac{r}{|r|}
+    $$
+
+    Note that because these kernels have high values, the rest density of the fluid is much higher than the number of simulation particles per unit (this was a bug we had, which caused our cube of fluid particles to explode!) We found that a rest density of approximately 6,000 worked well.
+</p>
+
+<p>
+    At each time step, we start by calculating the approximate position of each particle based on its current position and velocity. We then proceed to solve the constraint equation for each particle using the method outlined above, based on all the particles' newly calculated approximate positions (it's important not to use the old positions here - this was another big bug we had!) After calculating this for every particle, we update their positions, and also update their velocities based on their old positions and their new constrained positions. We repeat this process four times per frame. A higher number of solver iterations allows the simulation to converge more, but also slows down the code.
+
+</body>
+</html>
